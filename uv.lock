@@ -1056,7 +1056,7 @@ wheels = [
 ]
 
 [[package]]
-name = "horizon"
+name = "xinxianxing"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [

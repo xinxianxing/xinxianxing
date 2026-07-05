@@ -127,7 +127,7 @@
   },
   "webhook": {
     "enabled": false,
-    "url_env": "HORIZON_WEBHOOK_URL",
+    "url_env": "XINXIANXING_WEBHOOK_URL",
     "delivery": "summary",
     "overview_position": "first",
     "platform": "generic",

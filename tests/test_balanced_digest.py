@@ -15,7 +15,7 @@ from src.models import (
     SourceType,
     SourcesConfig,
 )
-from src.orchestrator import HorizonOrchestrator
+from src.orchestrator import XinxianxingOrchestrator
 
 
 def make_item(item_id: str, score: float, category: str | None) -> ContentItem:
@@ -31,8 +31,8 @@ def make_item(item_id: str, score: float, category: str | None) -> ContentItem:
     )
 
 
-def make_orchestrator(filtering: FilteringConfig) -> HorizonOrchestrator:
-    orchestrator = HorizonOrchestrator.__new__(HorizonOrchestrator)
+def make_orchestrator(filtering: FilteringConfig) -> XinxianxingOrchestrator:
+    orchestrator = XinxianxingOrchestrator.__new__(XinxianxingOrchestrator)
     orchestrator.config = SimpleNamespace(filtering=filtering)
     orchestrator.console = Console(record=True)
     return orchestrator
@@ -155,7 +155,7 @@ def test_run_applies_balanced_digest_before_enrichment(tmp_path, monkeypatch) ->
         ),
     )
     storage = SimpleNamespace()
-    orchestrator = HorizonOrchestrator(config, storage)
+    orchestrator = XinxianxingOrchestrator(config, storage)
     items = [
         make_item("ai", 9.0, "ai"),
         make_item("finance", 8.0, "finance"),

@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 from rich.console import Console
 
 from .storage.manager import ConfigError, StorageManager
-from .orchestrator import HorizonOrchestrator
+from .orchestrator import XinxianxingOrchestrator
 
 
 console = Console()
@@ -55,7 +55,7 @@ def main():
                     f"  [cyan]cp {example_path} {data_dir_path / 'config.json'}[/cyan]\n"
                 )
             console.print(
-                "Or run [bold cyan]uv run horizon-wizard[/bold cyan] to launch the interactive setup wizard.\n"
+                "Or run [bold cyan]uv run xinxianxing-wizard[/bold cyan] to launch the interactive setup wizard.\n"
             )
             sys.exit(1)
         except ConfigError as e:
@@ -66,7 +66,7 @@ def main():
             sys.exit(1)
 
         # Create and run orchestrator
-        orchestrator = HorizonOrchestrator(config, storage)
+        orchestrator = XinxianxingOrchestrator(config, storage)
         asyncio.run(orchestrator.run(force_hours=args.hours))
 
     except KeyboardInterrupt:

@@ -280,8 +280,8 @@
   },
   "webhook": {
     "enabled": true,
-    "url_env": "HORIZON_WEBHOOK_URL",
-    "paid_feishu_url": "${HORIZON_PAID_FEISHU_URL}",
+    "url_env": "XINXIANXING_WEBHOOK_URL",
+    "paid_feishu_url": "${XINXIANXING_PAID_FEISHU_URL}",
     "delivery": "summary",
     "overview_position": "first",
     "platform": "generic",

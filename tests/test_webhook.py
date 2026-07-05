@@ -35,12 +35,12 @@ _TEST_URL = "https://example.com/webhook"
 class TestRender:
     def test_simple_replacement(self):
         template = "Hello #{name}, today is #{date}"
-        variables = {"name": "Horizon", "date": "2026-04-24"}
-        assert _render(template, variables) == "Hello Horizon, today is 2026-04-24"
+        variables = {"name": "Xinxianxing", "date": "2026-04-24"}
+        assert _render(template, variables) == "Hello Xinxianxing, today is 2026-04-24"
 
     def test_no_matching_vars(self):
         template = "Hello #{unknown}"
-        variables = {"name": "Horizon"}
+        variables = {"name": "Xinxianxing"}
         assert _render(template, variables) == "Hello #{unknown}"
 
     def test_empty_template(self):
@@ -64,23 +64,23 @@ class TestRender:
 
 class TestRenderDictAndList:
     def test_simple_dict(self):
-        obj = {"title": "Horizon #{date}", "count": "#{item_count} items"}
+        obj = {"title": "Xinxianxing #{date}", "count": "#{item_count} items"}
         variables = {"date": "2026-04-24", "item_count": 15}
         result = _render(obj, variables)
-        assert result == {"title": "Horizon 2026-04-24", "count": "15 items"}
+        assert result == {"title": "Xinxianxing 2026-04-24", "count": "15 items"}
 
     def test_nested_dict(self):
         obj = {
             "msg_type": "interactive",
             "card": {
                 "schema": "2.0",
-                "header": {"title": "Horizon #{date}"},
+                "header": {"title": "Xinxianxing #{date}"},
                 "body": {"elements": [{"tag": "markdown", "content": "#{summary}"}]},
             },
         }
         variables = {"date": "2026-04-24", "summary": "## AI News\nLine 1"}
         result = _render(obj, variables)
-        assert result["card"]["header"]["title"] == "Horizon 2026-04-24"
+        assert result["card"]["header"]["title"] == "Xinxianxing 2026-04-24"
         assert result["card"]["body"]["elements"][0]["content"] == "## AI News\nLine 1"
 
     def test_list(self):
@@ -477,7 +477,7 @@ class TestWebhookNotifier:
         config = WebhookConfig(
             enabled=True,
             url_env=_TEST_URL_ENV,
-            request_body='{"msg_type": "post", "content": "Horizon #{date} #{item_count} items"}',
+            request_body='{"msg_type": "post", "content": "Xinxianxing #{date} #{item_count} items"}',
         )
         notifier = WebhookNotifier(config)
 
@@ -501,7 +501,7 @@ class TestWebhookNotifier:
             body_bytes = call_kwargs["content"]
             body_str = body_bytes.decode("utf-8")
             parsed = json.loads(body_str)
-            assert parsed["content"] == "Horizon 2026-04-24 15 items"
+            assert parsed["content"] == "Xinxianxing 2026-04-24 15 items"
         del os.environ[_TEST_URL_ENV]
 
     def test_post_request_with_json_str_body_containing_summary(self):
@@ -533,7 +533,7 @@ class TestWebhookNotifier:
             mock_client_cls.return_value = mock_client
 
             # summary without special chars — should parse fine
-            summary = "Horizon daily report: 10 items"
+            summary = "Xinxianxing daily report: 10 items"
             _run_async(notifier.notify({"summary": summary}))
             mock_client.post.assert_called_once()
 
@@ -649,7 +649,7 @@ class TestWebhookNotifier:
                 "msg_type": "interactive",
                 "card": {
                     "schema": "2.0",
-                    "header": {"title": "Horizon #{date}"},
+                    "header": {"title": "Xinxianxing #{date}"},
                     "body": {
                         "elements": [{"tag": "markdown", "content": "#{summary}"}]
                     },
@@ -679,7 +679,7 @@ class TestWebhookNotifier:
 
             body_str = call_kwargs["content"].decode("utf-8")
             parsed = json.loads(body_str)
-            assert parsed["card"]["header"]["title"] == "Horizon 2026-04-24"
+            assert parsed["card"]["header"]["title"] == "Xinxianxing 2026-04-24"
             assert parsed["card"]["body"]["elements"][0]["content"] == "## News\nLine 1"
         del os.environ[_TEST_URL_ENV]
 
@@ -779,7 +779,7 @@ class TestWebhookConfigModel:
     def test_full_config(self):
         config = WebhookConfig(
             enabled=True,
-            url_env="HORIZON_WEBHOOK_URL",
+            url_env="XINXIANXING_WEBHOOK_URL",
             paid_feishu_url="https://example.com/paid",
             request_body='{"msg_type":"post"}',
             headers="Authorization: Bearer xxx",
@@ -791,7 +791,7 @@ class TestWebhookConfigModel:
             languages=["zh"],
         )
         assert config.enabled is True
-        assert config.url_env == "HORIZON_WEBHOOK_URL"
+        assert config.url_env == "XINXIANXING_WEBHOOK_URL"
         assert config.paid_feishu_url == "https://example.com/paid"
         assert config.delivery == "summary_and_items"
         assert config.overview_position == "last"

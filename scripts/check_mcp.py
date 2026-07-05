@@ -1,28 +1,28 @@
 #!/usr/bin/env python3
-"""Local smoke check for Horizon MCP integration."""
+"""Local smoke check for Xinxianxing MCP integration."""
 
 from __future__ import annotations
 
 import asyncio
 import json
 
-from src.mcp.horizon_adapter import resolve_horizon_path
-from src.mcp.server import hz_get_metrics
-from src.mcp.service import HorizonPipelineService
+from src.mcp.xinxianxing_adapter import resolve_xinxianxing_path
+from src.mcp.server import xx_get_metrics
+from src.mcp.service import XinxianxingPipelineService
 
 
 async def _main() -> None:
-    horizon_path = resolve_horizon_path()
-    service = HorizonPipelineService()
+    xinxianxing_path = resolve_xinxianxing_path()
+    service = XinxianxingPipelineService()
     validation = await service.validate_config(
-        horizon_path=str(horizon_path),
+        xinxianxing_path=str(xinxianxing_path),
         check_env=False,
     )
-    metrics = hz_get_metrics()
+    metrics = xx_get_metrics()
 
     payload = {
         "ok": True,
-        "horizon_path": str(horizon_path),
+        "xinxianxing_path": str(xinxianxing_path),
         "config_path": validation["config_path"],
         "enabled_sources": validation["enabled_sources"],
         "languages": validation["ai"]["languages"],

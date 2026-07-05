@@ -1,4 +1,4 @@
-"""Core data models for Horizon."""
+"""Core data models for Xinxianxing."""
 
 from datetime import datetime, timezone
 from enum import Enum
@@ -269,7 +269,7 @@ class OpenBBConfig(BaseModel):
 
     Provider credentials (FMP, Benzinga, Polygon, Intrinio, Tiingo, etc.)
     are resolved by openbb from environment variables / its own user
-    settings file, so Horizon does not need to pass them explicitly.
+    settings file, so Xinxianxing does not need to pass them explicitly.
     """
 
     enabled: bool = True

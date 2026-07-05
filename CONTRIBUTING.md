@@ -1,6 +1,6 @@
-# Contributing to Horizon
+# Contributing to Xinxianxing
 
-Thanks for your interest in contributing to Horizon.
+Thanks for your interest in contributing to Xinxianxing.
 
 ## Ways to Contribute
 
@@ -23,7 +23,7 @@ Please keep pull requests focused and easy to review.
 
 ## Share Sources
 
-Horizon also welcomes **source contributions**, not just code.
+Xinxianxing also welcomes **source contributions**, not just code.
 
 If you discover high-quality sources worth sharing with other users, please submit them via **[xinxianxing.com](https://xinxianxing.com)**.
 
@@ -39,7 +39,7 @@ Good examples include:
 
 Please make sure your contribution is:
 
-- relevant to Horizon users
+- relevant to Xinxianxing users
 - clear and well-described
 - respectful of copyright and platform rules
 

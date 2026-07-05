@@ -41,7 +41,7 @@ class BalancedDigestResult:
     duplicate_categories: List[str] = field(default_factory=list)
 
 
-class HorizonOrchestrator:
+class XinxianxingOrchestrator:
     """Orchestrates the complete workflow for content aggregation and analysis."""
 
     def __init__(self, config: Config, storage: StorageManager):

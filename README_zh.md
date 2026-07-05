@@ -4,17 +4,17 @@
 
 <p><strong>你只需关注 AI 信息差，剩下交给信先行。</strong></p>
 
-<a href="https://trendshift.io/repositories/22864?utm_source=trendshift-badge&amp;utm_medium=badge&amp;utm_campaign=badge-trendshift-22864" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/trendshift/repositories/22864/daily" alt="Thysrael%2FHorizon | Trendshift" width="250" height="55"/></a>
-<a href="https://trendshift.io/repositories/22864?utm_source=trendshift-badge&amp;utm_medium=badge&amp;utm_campaign=badge-trendshift-22864" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/trendshift/repositories/22864/weekly?language=Python" alt="Thysrael%2FHorizon | Trendshift" width="250" height="55"/></a>
-<a href="https://hellogithub.com/repository/Thysrael/Horizon" target="_blank"><img src="https://abroad.hellogithub.com/v1/widgets/recommend.svg?rid=7a4b606e28e4477998d35851cf4fdddf&claim_uid=rtjnLkYT7ziQJUG" alt="Featured｜HelloGitHub" style="width: 250px; height: 54px;" width="250" height="54" /></a>
+<a href="https://trendshift.io/repositories/22864?utm_source=trendshift-badge&amp;utm_medium=badge&amp;utm_campaign=badge-trendshift-22864" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/trendshift/repositories/22864/daily" alt="xinxianxing%2Fxinxianxing | Trendshift" width="250" height="55"/></a>
+<a href="https://trendshift.io/repositories/22864?utm_source=trendshift-badge&amp;utm_medium=badge&amp;utm_campaign=badge-trendshift-22864" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/trendshift/repositories/22864/weekly?language=Python" alt="xinxianxing%2Fxinxianxing | Trendshift" width="250" height="55"/></a>
+<a href="https://hellogithub.com/repository/xinxianxing/xinxianxing" target="_blank"><img src="https://abroad.hellogithub.com/v1/widgets/recommend.svg?rid=7a4b606e28e4477998d35851cf4fdddf&claim_uid=rtjnLkYT7ziQJUG" alt="Featured｜HelloGitHub" style="width: 250px; height: 54px;" width="250" height="54" /></a>
 <br>
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg?style=for-the-badge&logo=opensourceinitiative&logoColor=white)](LICENSE)
 [![Tool uv](https://img.shields.io/badge/Tool-uv-4B275F?style=for-the-badge&logo=uv&logoColor=white)](https://github.com/astral-sh/uv)
 [![Website](https://img.shields.io/badge/Website-xinxianxing-263238?style=for-the-badge&logo=homepage&logoColor=white)](https://xinxianxing.com/)
-[![Daily](https://img.shields.io/github/actions/workflow/status/Thysrael/Horizon/deploy-docs.yml?branch=main&label=Daily&style=for-the-badge&logo=date-fns&logoColor=white)](https://xinxianxing.com/)
-[![Commit](https://img.shields.io/github/commit-activity/m/Thysrael/Horizon?label=Commit&style=for-the-badge&logo=github&logoColor=white)](https://github.com/Thysrael/Horizon/commits/main)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=for-the-badge&logo=github&logoColor=white)](https://github.com/Thysrael/Horizon/pulls)
+[![Daily](https://img.shields.io/github/actions/workflow/status/xinxianxing/xinxianxing/deploy-docs.yml?branch=main&label=Daily&style=for-the-badge&logo=date-fns&logoColor=white)](https://xinxianxing.com/)
+[![Commit](https://img.shields.io/github/commit-activity/m/xinxianxing/xinxianxing?label=Commit&style=for-the-badge&logo=github&logoColor=white)](https://github.com/xinxianxing/xinxianxing/commits/main)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=for-the-badge&logo=github&logoColor=white)](https://github.com/xinxianxing/xinxianxing/pulls)
 ![Sources Welcome](https://img.shields.io/badge/sources-welcome-f97316?style=for-the-badge&logo=rss&logoColor=white)
 
 ![Claude](https://img.shields.io/badge/Claude-f0daba?style=flat-square&logo=anthropic&logoColor=black)
@@ -171,11 +171,11 @@ flowchart LR
 
 ## 赞助
 
-信先行基于原开源项目改造。如果你愿意支持这个项目，或希望出现在这里，欢迎[创建一个 Issue](https://github.com/Thysrael/Horizon/issues/new) 或[发邮件](mailto:thysrael@163.com)联系我。
+信先行基于原开源项目改造。如果你愿意支持这个项目，或希望出现在这里，欢迎[创建一个 Issue](https://github.com/xinxianxing/xinxianxing/issues/new) 或[发邮件](mailto:thysrael@163.com)联系我。
 
 | 支持方 | 说明 |
 |--------|------|
-| [<img src="docs/assets/compshare-logo.png" alt="Compshare / 优云智算" width="220" />](https://www.compshare.cn/?ytag=GPU_YY_git_Horizon) | 优云智算目前正在支持信先行的上游项目。优云智算是 UCloud 旗下 AI 云平台，主打包月、按次的高性价比国模 Agent Plan 套餐，低至 49 元/月起，同时提供官转稳定海外模型。支持接入 Claude Code、Codex 及 API 调用，支持企业高并发、7*24 技术支持和自助开票。<br><br>通过其[链接](https://www.compshare.cn/?ytag=GPU_YY_git_Horizon)注册，可获得 5 元平台体验金。 |
+| [<img src="docs/assets/compshare-logo.png" alt="Compshare / 优云智算" width="220" />](https://www.compshare.cn/?ytag=GPU_YY_git_Xinxianxing) | 优云智算目前正在支持信先行的上游项目。优云智算是 UCloud 旗下 AI 云平台，主打包月、按次的高性价比国模 Agent Plan 套餐，低至 49 元/月起，同时提供官转稳定海外模型。支持接入 Claude Code、Codex 及 API 调用，支持企业高并发、7*24 技术支持和自助开票。<br><br>通过其[链接](https://www.compshare.cn/?ytag=GPU_YY_git_Xinxianxing)注册，可获得 5 元平台体验金。 |
 
 ## 快速开始
 
@@ -184,8 +184,8 @@ flowchart LR
 #### 方式 A：本地安装
 
 ```bash
-git clone https://github.com/Thysrael/Horizon.git
-cd horizon
+git clone https://github.com/xinxianxing/xinxianxing.git
+cd xinxianxing
 
 # 使用 uv 安装（推荐）
 uv sync
@@ -214,8 +214,8 @@ uv pip install --only-binary=:all: openbb openbb-benzinga
 #### 方式 B：Docker
 
 ```bash
-git clone https://github.com/Thysrael/Horizon.git
-cd horizon
+git clone https://github.com/xinxianxing/xinxianxing.git
+cd xinxianxing
 
 # 配置环境
 cp .env.example .env
@@ -223,10 +223,10 @@ cp data/config.example.json data/config.json
 # 编辑 .env 和 data/config.json，填入你的 API 密钥和偏好设置
 
 # 使用 Docker Compose 运行
-docker compose run --rm horizon
+docker compose run --rm xinxianxing
 
 # 或自定义时间窗口
-docker compose run --rm horizon --hours 48
+docker compose run --rm xinxianxing --hours 48
 ```
 
 ### 2. 配置
@@ -234,7 +234,7 @@ docker compose run --rm horizon --hours 48
 **方式 A：交互式向导（推荐）**
 
 ```bash
-uv run horizon-wizard
+uv run xinxianxing-wizard
 ```
 
 向导会询问你的兴趣（如"LLM 推理"、"嵌入式"、"web 安全"），自动推荐并生成 `data/config.json`，还可选让 AI 补充推荐小众源。若你想分享信息源，请前往 [xinxianxing.com](https://xinxianxing.com/)。
@@ -304,15 +304,15 @@ cp data/config.example.json data/config.json  # 自定义信息源
 #### 本地安装
 
 ```bash
-uv run horizon              # 使用默认 24 小时窗口
-uv run horizon --hours 48   # 抓取最近 48 小时的内容
+uv run xinxianxing              # 使用默认 24 小时窗口
+uv run xinxianxing --hours 48   # 抓取最近 48 小时的内容
 ```
 
 #### 使用 Docker
 
 ```bash
-docker compose run --rm horizon              # 使用默认 24 小时窗口
-docker compose run --rm horizon --hours 48   # 抓取最近 48 小时的内容
+docker compose run --rm xinxianxing              # 使用默认 24 小时窗口
+docker compose run --rm xinxianxing --hours 48   # 抓取最近 48 小时的内容
 ```
 
 生成的日报将保存在 `data/summaries/` 目录中。

@@ -1,4 +1,4 @@
-"""Interactive setup wizard for Horizon configuration."""
+"""Interactive setup wizard for Xinxianxing configuration."""
 
 import json
 import os
@@ -370,7 +370,7 @@ def main():
     console.print("\n[dim]Fetching preset source library...[/dim]")
     try:
         presets = load_presets(prefer_api=True)
-        offline = os.environ.get("HORIZON_OFFLINE", "").lower() in ("1", "true", "yes")
+        offline = os.environ.get("XINXIANXING_OFFLINE", "").lower() in ("1", "true", "yes")
         if offline:
             console.print("[dim]Using local presets (offline mode)[/dim]")
         else:
@@ -433,7 +433,7 @@ def main():
         f"  AI:      {ai_config.provider.value} / {ai_config.model}\n"
         f"  Sources: {_count_sources(config)} total\n"
         f"  Threshold: {config.filtering.ai_score_threshold}\n\n"
-        f"Run [bold cyan]horizon[/bold cyan] to start aggregating!",
+        f"Run [bold cyan]xinxianxing[/bold cyan] to start aggregating!",
         title="Setup Complete",
         border_style="green",
     ))

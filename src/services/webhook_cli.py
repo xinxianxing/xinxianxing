@@ -163,7 +163,7 @@ async def _run_test(
 
 
 def main() -> None:
-    """CLI entry point for horizon-webhook."""
+    """CLI entry point for xinxianxing-webhook."""
     parser = argparse.ArgumentParser(
         description="Test webhook connectivity and preview rendered content",
     )
@@ -194,7 +194,7 @@ def main() -> None:
         except FileNotFoundError:
             console.print("[bold red]Configuration file not found![/bold red]")
             console.print(
-                "Run [bold cyan]uv run horizon-wizard[/bold cyan] to set up your configuration."
+                "Run [bold cyan]uv run xinxianxing-wizard[/bold cyan] to set up your configuration."
             )
             sys.exit(1)
         except ConfigError as e:

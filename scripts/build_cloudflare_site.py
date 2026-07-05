@@ -35,8 +35,8 @@ PAGE_FILES = [
 ]
 
 ASSET_FILES = [
-    (DOCS / "assets/css/horizon.css", DIST / "assets/css/site.css"),
-    (DOCS / "assets/js/horizon.js", DIST / "assets/js/site.js"),
+    (DOCS / "assets/css/xinxianxing.css", DIST / "assets/css/site.css"),
+    (DOCS / "assets/js/xinxianxing.js", DIST / "assets/js/site.js"),
 ]
 
 BRAND_SVG = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 420" role="img" aria-labelledby="title desc">

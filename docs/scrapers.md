@@ -246,7 +246,7 @@ Error handling:
 Manual URL ingestion is not a scheduled scraper, but it produces the same `ContentItem` and Action Card structure as automatic sources. Run it with:
 
 ```bash
-uv run horizon-add "https://example.com/article"
+uv run xinxianxing-add "https://example.com/article"
 ```
 
 Flow:

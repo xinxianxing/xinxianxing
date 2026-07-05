@@ -6,8 +6,8 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from src.models import ContentItem, SourceType
-from src.mcp.server import hz_get_metrics
-from src.mcp.service import HorizonPipelineService
+from src.mcp.server import xx_get_metrics
+from src.mcp.service import XinxianxingPipelineService
 
 
 def make_item(item_id: str, score: float | None = None) -> ContentItem:
@@ -30,10 +30,10 @@ def test_validate_config_smoke(tmp_path: Path) -> None:
         encoding="utf-8",
     )
 
-    service = HorizonPipelineService(runs_root=tmp_path / "mcp-runs")
+    service = XinxianxingPipelineService(runs_root=tmp_path / "mcp-runs")
     result = asyncio.run(
         service.validate_config(
-            horizon_path=str(repo_root),
+            xinxianxing_path=str(repo_root),
             config_path=str(config_path),
             check_env=False,
         )
@@ -52,9 +52,9 @@ def test_get_effective_config_can_filter_sources(tmp_path: Path) -> None:
         encoding="utf-8",
     )
 
-    service = HorizonPipelineService(runs_root=tmp_path / "mcp-runs")
+    service = XinxianxingPipelineService(runs_root=tmp_path / "mcp-runs")
     result = service.get_effective_config(
-        horizon_path=str(repo_root),
+        xinxianxing_path=str(repo_root),
         config_path=str(config_path),
         sources=["rss"],
     )
@@ -65,14 +65,14 @@ def test_get_effective_config_can_filter_sources(tmp_path: Path) -> None:
 
 
 def test_metrics_tool_smoke() -> None:
-    result = hz_get_metrics()
+    result = xx_get_metrics()
 
     assert result["ok"] is True
-    assert result["tool"] == "hz_get_metrics"
+    assert result["tool"] == "xx_get_metrics"
 
 
 def test_fetch_items_uses_public_orchestrator_api(tmp_path: Path, monkeypatch) -> None:
-    service = HorizonPipelineService(runs_root=tmp_path / "mcp-runs")
+    service = XinxianxingPipelineService(runs_root=tmp_path / "mcp-runs")
     config_path = tmp_path / "config.json"
 
     monkeypatch.setattr(
@@ -80,7 +80,7 @@ def test_fetch_items_uses_public_orchestrator_api(tmp_path: Path, monkeypatch) -
         "_build_context",
         lambda **kwargs: (
             SimpleNamespace(
-                horizon_path=tmp_path,
+                xinxianxing_path=tmp_path,
                 config_path=config_path,
                 runtime=SimpleNamespace(),
                 config=SimpleNamespace(),
@@ -111,7 +111,7 @@ def test_fetch_items_uses_public_orchestrator_api(tmp_path: Path, monkeypatch) -
 
 
 def test_filter_items_uses_public_topic_dedup_api(tmp_path: Path, monkeypatch) -> None:
-    service = HorizonPipelineService(runs_root=tmp_path / "mcp-runs")
+    service = XinxianxingPipelineService(runs_root=tmp_path / "mcp-runs")
     service.run_store.create_run("run-topic-dedup")
 
     monkeypatch.setattr(
@@ -145,7 +145,7 @@ def test_filter_items_uses_public_topic_dedup_api(tmp_path: Path, monkeypatch) -
 
 
 def test_filter_items_applies_balanced_digest(tmp_path: Path, monkeypatch) -> None:
-    service = HorizonPipelineService(runs_root=tmp_path / "mcp-runs")
+    service = XinxianxingPipelineService(runs_root=tmp_path / "mcp-runs")
     service.run_store.create_run("run-balanced")
     filtering = SimpleNamespace(
         ai_score_threshold=7.0,

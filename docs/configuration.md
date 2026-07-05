@@ -139,7 +139,7 @@ Use the [DashScope compatible-mode](https://help.aliyun.com/zh/dashscope/develop
 
 Omit `base_url` to use the default `http://localhost:11434/v1`.
 For remote Ollama servers, set `ai.base_url` in `data/config.json` or set
-`HORIZON_OLLAMA_BASE_URL` in `.env`. `OLLAMA_BASE_URL` and `OLLAMA_HOST` are
+`XINXIANXING_OLLAMA_BASE_URL` in `.env`. `OLLAMA_BASE_URL` and `OLLAMA_HOST` are
 also recognized. If the value omits `/v1`, 信先行 appends it automatically
 for Ollama's OpenAI-compatible endpoint.
 
@@ -494,7 +494,7 @@ Example:
 ```json
 {
   "ai": {
-    "base_url": "${HORIZON_AI_BASE_URL}"
+    "base_url": "${XINXIANXING_AI_BASE_URL}"
   },
   "sources": {
     "rss": [
@@ -506,13 +506,13 @@ Example:
     ]
   },
   "webhook": {
-    "url_env": "HORIZON_WEBHOOK_URL",
-    "headers": "Authorization: Bearer ${HORIZON_WEBHOOK_TOKEN}"
+    "url_env": "XINXIANXING_WEBHOOK_URL",
+    "headers": "Authorization: Bearer ${XINXIANXING_WEBHOOK_TOKEN}"
   }
 }
 ```
 
-- `${NAME}` is replaced only when `NAME` is a valid identifier like `LWN_KEY` or `HORIZON_AI_BASE_URL`.
+- `${NAME}` is replaced only when `NAME` is a valid identifier like `LWN_KEY` or `XINXIANXING_AI_BASE_URL`.
 - Unset variables are left as `${NAME}` instead of becoming an empty string, so configuration mistakes fail loudly downstream.
 - Expansion is recursive through dicts, lists, and tuples; non-string values are left unchanged.
 
@@ -578,7 +578,7 @@ Webhook notification is optional and disabled unless `webhook.enabled` is `true`
 {
   "webhook": {
     "enabled": true,
-    "url_env": "HORIZON_WEBHOOK_URL",
+    "url_env": "XINXIANXING_WEBHOOK_URL",
     "paid_feishu_url": "",
     "delivery": "summary",
     "overview_position": "first",
@@ -595,7 +595,7 @@ Webhook notification is optional and disabled unless `webhook.enabled` is `true`
 ```
 
 - `enabled`: Turns webhook delivery on or off. The default is `false`.
-- `url_env`: Environment variable that contains the webhook URL. For example, set `HORIZON_WEBHOOK_URL=https://...` in `.env`.
+- `url_env`: Environment variable that contains the webhook URL. For example, set `XINXIANXING_WEBHOOK_URL=https://...` in `.env`.
 - `paid_feishu_url`: Optional direct Feishu/Lark bot URL for the paid-user channel. Leave it blank to skip paid delivery without affecting the public webhook.
 - `delivery`: Controls how messages are sent. Use `summary` for one full message, or `summary_and_items` for one overview message followed by one message per selected item.
 - `overview_position`: Controls where the overview is sent in `summary_and_items` mode. Use `first` for the traditional order, or `last` to send item details in reverse and keep the overview as the newest chat message.
@@ -628,7 +628,7 @@ Example `summary_and_items` Markdown delivery config:
 {
   "webhook": {
     "enabled": true,
-    "url_env": "HORIZON_WEBHOOK_URL",
+    "url_env": "XINXIANXING_WEBHOOK_URL",
     "delivery": "summary_and_items",
     "overview_position": "last",
     "platform": "generic",
@@ -704,7 +704,7 @@ To keep the group chat compact while still allowing readers to browse the full b
 {
   "webhook": {
     "enabled": true,
-    "url_env": "HORIZON_WEBHOOK_URL",
+    "url_env": "XINXIANXING_WEBHOOK_URL",
     "platform": "feishu",
     "layout": "collapsible",
     "fallback_layout": "markdown",
@@ -753,7 +753,7 @@ With this layout, 信先行 sends one interactive card containing the overview a
 
 `.github/workflows/daily-summary.yml` runs once per day at 00:00 UTC, which is
 08:00 in Asia/Shanghai. The workflow uses `data/config.github.json`, maps
-runtime secrets from GitHub Actions Secrets, runs `uv run horizon --hours 24`,
+runtime secrets from GitHub Actions Secrets, runs `uv run xinxianxing --hours 24`,
 and commits only generated review artifacts:
 
 - `data/drafts/`
@@ -768,11 +768,11 @@ Required GitHub Actions Secrets for the current configuration:
 
 - `DEEPSEEK_API_KEY`: DeepSeek API key used by `ai.api_key_env`.
 - `APIFY_TOKEN`: Apify API token used by the Twitter/X scraper.
-- `HORIZON_WEBHOOK_URL`: Public Feishu/Lark bot webhook URL.
+- `XINXIANXING_WEBHOOK_URL`: Public Feishu/Lark bot webhook URL.
 
 Optional:
 
-- `HORIZON_PAID_FEISHU_URL`: Paid-channel Feishu/Lark bot webhook URL. If it is
+- `XINXIANXING_PAID_FEISHU_URL`: Paid-channel Feishu/Lark bot webhook URL. If it is
   unset, the paid push is skipped and the public push still runs.
 
 ## Static Site
@@ -783,10 +783,10 @@ To use GitHub Pages, enable Pages for the repository and run the scheduled workf
 
 ### Manual URL Add
 
-Use `horizon-add` when you already have a useful public article or tweet URL and want to generate an Action Card without waiting for the scheduled scraper run:
+Use `xinxianxing-add` when you already have a useful public article or tweet URL and want to generate an Action Card without waiting for the scheduled scraper run:
 
 ```bash
-uv run horizon-add "https://example.com/article"
+uv run xinxianxing-add "https://example.com/article"
 ```
 
 Optional flags:
@@ -798,7 +798,7 @@ The command fetches the public page, extracts readable text, reuses the existing
 
 ### Share Images
 
-After `uv run horizon` finishes generating the daily draft, 信先行 automatically creates one 3:4 mobile share image from the highest-scoring Action Cards in the selected draft. The image is saved under:
+After `uv run xinxianxing` finishes generating the daily draft, 信先行 automatically creates one 3:4 mobile share image from the highest-scoring Action Cards in the selected draft. The image is saved under:
 
 ```text
 data/share_images/YYYY-MM-DD-share.png
@@ -811,9 +811,9 @@ The share image renderer reads the existing draft Markdown directly; it does not
 信先行 includes an MCP server for AI assistants and MCP-compatible clients.
 
 ```bash
-uv run horizon-mcp
+uv run xinxianxing-mcp
 ```
 
-Available tools include `hz_validate_config`, `hz_fetch_items`, `hz_score_items`, `hz_filter_items`, `hz_enrich_items`, `hz_generate_summary`, and `hz_run_pipeline`.
+Available tools include `xx_validate_config`, `xx_fetch_items`, `xx_score_items`, `xx_filter_items`, `xx_enrich_items`, `xx_generate_summary`, and `xx_run_pipeline`.
 
 See [`src/mcp/README.md`](../src/mcp/README.md) for the full tool reference and [`src/mcp/integration.md`](../src/mcp/integration.md) for client setup.

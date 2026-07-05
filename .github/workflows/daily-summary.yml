@@ -42,19 +42,19 @@ jobs:
         env:
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
           APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
-          HORIZON_WEBHOOK_URL: ${{ secrets.HORIZON_WEBHOOK_URL }}
-          HORIZON_PAID_FEISHU_URL: ${{ secrets.HORIZON_PAID_FEISHU_URL }}
+          XINXIANXING_WEBHOOK_URL: ${{ secrets.XINXIANXING_WEBHOOK_URL }}
+          XINXIANXING_PAID_FEISHU_URL: ${{ secrets.XINXIANXING_PAID_FEISHU_URL }}
         run: |
           missing=0
-          for name in DEEPSEEK_API_KEY APIFY_TOKEN HORIZON_WEBHOOK_URL; do
+          for name in DEEPSEEK_API_KEY APIFY_TOKEN XINXIANXING_WEBHOOK_URL; do
             if [ -z "${!name}" ]; then
               echo "::error::Missing required GitHub Actions secret: ${name}"
               missing=1
             fi
           done
 
-          if [ -z "${HORIZON_PAID_FEISHU_URL}" ]; then
-            echo "::warning::HORIZON_PAID_FEISHU_URL is not set; paid Feishu delivery will be skipped."
+          if [ -z "${XINXIANXING_PAID_FEISHU_URL}" ]; then
+            echo "::warning::XINXIANXING_PAID_FEISHU_URL is not set; paid Feishu delivery will be skipped."
           fi
 
           exit "$missing"
@@ -75,9 +75,9 @@ jobs:
         env:
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
           APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
-          HORIZON_WEBHOOK_URL: ${{ secrets.HORIZON_WEBHOOK_URL }}
-          HORIZON_PAID_FEISHU_URL: ${{ secrets.HORIZON_PAID_FEISHU_URL }}
-        run: uv run horizon --hours 24
+          XINXIANXING_WEBHOOK_URL: ${{ secrets.XINXIANXING_WEBHOOK_URL }}
+          XINXIANXING_PAID_FEISHU_URL: ${{ secrets.XINXIANXING_PAID_FEISHU_URL }}
+        run: uv run xinxianxing --hours 24
 
       - name: Ensure published posts were not changed
         run: |

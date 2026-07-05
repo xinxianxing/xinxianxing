@@ -439,7 +439,7 @@ async def add_url(
 
 
 def main() -> None:
-    """CLI entry point for `horizon-add`."""
+    """CLI entry point for `xinxianxing-add`."""
     parser = argparse.ArgumentParser(
         description="Manually add one article/tweet URL and generate a 信先行 Action Card."
     )
