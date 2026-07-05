@@ -58,12 +58,17 @@
     toggle.appendChild(btnEn);
     toggle.appendChild(btnZh);
 
-    // Insert at top of body
-    document.body.insertBefore(toggle, document.body.firstChild);
+    // Prefer the site header when present; fall back to the body for older pages.
+    var mount = document.querySelector('.site-actions');
+    if (mount) {
+      mount.appendChild(toggle);
+    } else {
+      document.body.insertBefore(toggle, document.body.firstChild);
+    }
 
     // Read saved preference, default to zh
     var saved = null;
-    try { saved = localStorage.getItem('horizon-lang'); } catch (e) { /* noop */ }
+    try { saved = localStorage.getItem('xinxianxing-lang'); } catch (e) { /* noop */ }
     var currentLang = saved === 'en' ? 'en' : 'zh';
 
     function updateButtons(lang) {
@@ -106,7 +111,7 @@
     function setLang(lang) {
       currentLang = lang;
       updateButtons(lang);
-      try { localStorage.setItem('horizon-lang', lang); } catch (e) { /* noop */ }
+      try { localStorage.setItem('xinxianxing-lang', lang); } catch (e) { /* noop */ }
       if (zhSection && enSection) {
         showSection(lang);
       } else {
@@ -124,9 +129,80 @@
     }
   }
 
+  /** Add local review buttons to every generated Action Card */
+  function setupActionCardFeedback() {
+    var cards = document.querySelectorAll('.action-card[data-card-id]');
+    if (!cards.length) return;
+
+    var buttons = [
+      { type: 'useful', label: '👍 有用' },
+      { type: 'favorite', label: '⭐ 收藏' },
+      { type: 'ignore', label: '👎 忽略' }
+    ];
+
+    function postFeedback(cardId, buttonType) {
+      var payload = JSON.stringify({
+        card_id: cardId,
+        button_type: buttonType
+      });
+      var options = {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: payload
+      };
+
+      return fetch('/api/feedback', options).then(function (response) {
+        if (response.ok) return response;
+        throw new Error('same-origin feedback API unavailable');
+      }).catch(function () {
+        return fetch('http://127.0.0.1:8765/api/feedback', options);
+      });
+    }
+
+    cards.forEach(function (card) {
+      if (card.querySelector('.action-card-feedback')) return;
+
+      var cardId = card.getAttribute('data-card-id');
+      var toolbar = document.createElement('div');
+      toolbar.className = 'action-card-feedback';
+      toolbar.setAttribute('aria-label', 'Action Card feedback');
+
+      buttons.forEach(function (cfg) {
+        var button = document.createElement('button');
+        button.type = 'button';
+        button.textContent = cfg.label;
+        button.setAttribute('data-feedback-type', cfg.type);
+        button.addEventListener('click', function () {
+          button.disabled = true;
+          postFeedback(cardId, cfg.type).then(function (response) {
+            if (!response.ok) throw new Error('feedback API error');
+            toolbar.querySelectorAll('button').forEach(function (btn) {
+              btn.classList.remove('active');
+            });
+            button.classList.add('active');
+            button.textContent = cfg.label + ' ✓';
+          }).catch(function () {
+            button.disabled = false;
+            button.classList.add('error');
+            button.title = '反馈暂未记录，请稍后再试';
+          });
+        });
+        toolbar.appendChild(button);
+      });
+
+      var heading = card.querySelector('h2');
+      if (heading && heading.parentNode) {
+        heading.parentNode.insertBefore(toolbar, heading.nextSibling);
+      } else {
+        card.insertBefore(toolbar, card.firstChild);
+      }
+    });
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     processScoreBadges();
     markSemanticElements();
     setupLanguageToggle();
+    setupActionCardFeedback();
   });
 })();

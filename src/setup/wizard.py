@@ -13,7 +13,7 @@ from rich.table import Table
 from rich.panel import Panel
 
 from ..models import (
-    AIConfig, AIProvider, Config, FilteringConfig, SourcesConfig,
+    AIConfig, AIProvider, AI_PROVIDER_DEFAULTS, Config, FilteringConfig, SourcesConfig,
     GitHubSourceConfig, HackerNewsConfig, RSSSourceConfig,
     RedditConfig, RedditSubredditConfig, RedditUserConfig,
     TelegramConfig, TelegramChannelConfig,
@@ -59,28 +59,27 @@ def configure_ai() -> Optional[AIConfig]:
         choices=providers,
         default="openai",
     )
+    provider_enum = AIProvider(provider)
 
-    model = Prompt.ask("Model name", default="deepseek-chat" if provider in ("openai", "deepseek") else "")
+    provider_defaults = AI_PROVIDER_DEFAULTS.get(provider_enum, {})
+    model = Prompt.ask("Model name", default=provider_defaults.get("model", ""))
 
-    base_url = Prompt.ask("Base URL (leave empty for default)", default="")
+    if provider_enum == AIProvider.OLLAMA:
+        base_url = Prompt.ask(
+            "Ollama base URL (leave empty for http://localhost:11434)",
+            default="",
+        )
+    else:
+        base_url = Prompt.ask("Base URL (leave empty for default)", default="")
 
     # Determine default env var name
-    default_env = {
-        "anthropic": "ANTHROPIC_API_KEY",
-        "openai": "OPENAI_API_KEY",
-        "gemini": "GOOGLE_API_KEY",
-        "ali": "DASHSCOPE_API_KEY",
-        "doubao": "DOUBAO_API_KEY",
-        "minimax": "MINIMAX_API_KEY",
-        "deepseek": "DEEPSEEK_API_KEY",
-    }
     api_key_env = Prompt.ask(
         "API key environment variable name",
-        default=default_env.get(provider, "API_KEY"),
+        default=provider_defaults.get("api_key_env", "API_KEY"),
     )
 
     # Check if the key is actually set
-    if not os.getenv(api_key_env):
+    if api_key_env and not os.getenv(api_key_env):
         console.print(
             f"[yellow]⚠  {api_key_env} is not set in environment or .env file.[/yellow]"
         )
@@ -94,7 +93,7 @@ def configure_ai() -> Optional[AIConfig]:
     lang_list = [l.strip() for l in languages.split(",") if l.strip()]
 
     return AIConfig(
-        provider=AIProvider(provider),
+        provider=provider_enum,
         model=model,
         base_url=base_url or None,
         api_key_env=api_key_env,
@@ -102,6 +101,12 @@ def configure_ai() -> Optional[AIConfig]:
         max_tokens=8192,
         languages=lang_list,
     )
+
+
+def _ai_recommendations_available(ai_config: AIConfig) -> bool:
+    if ai_config.provider == AIProvider.OLLAMA:
+        return True
+    return bool(ai_config.api_key_env and os.getenv(ai_config.api_key_env))
 
 
 def get_interests() -> str:
@@ -385,7 +390,7 @@ def main():
 
     # Step 4: AI recommendations (optional)
     ai_sources = []
-    ai_available = bool(os.getenv(ai_config.api_key_env))
+    ai_available = _ai_recommendations_available(ai_config)
 
     if ai_available:
         if Confirm.ask("\nAsk AI for additional source recommendations?", default=True):

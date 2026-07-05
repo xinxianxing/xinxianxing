@@ -1,19 +1,26 @@
-name: Daily Horizon Summary
+name: Daily Xinxianxing Draft
 
 on:
-  # schedule:
-  #   - cron: '0 0 */2 * *'  # Runs every 2 days at 00:00 UTC
-  workflow_dispatch:      # Allow manual trigger
+  schedule:
+    # 00:00 UTC = 08:00 Asia/Shanghai.
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: daily-xinxianxing-draft
+  cancel-in-progress: false
 
 jobs:
-  daily-summary:
+  daily-draft:
     runs-on: ubuntu-latest
     permissions:
-      contents: write  # Needed to commit changes
+      contents: write
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v6
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -21,30 +28,80 @@ jobs:
           python-version: "3.12"
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v3
+        uses: astral-sh/setup-uv@v6
+
+      - name: Install system fonts for share image
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fonts-noto-cjk
 
       - name: Install dependencies
         run: uv sync
 
-      - name: Run Horizon
+      - name: Validate required secrets
         env:
-          # Map secrets to environment variables expected by config.json
-          # Modify these based on your config.json provider settings
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
-          LWN_KEY: ${{ secrets.LWN_KEY }}
-        run: uv run horizon --hours 48
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
+          HORIZON_WEBHOOK_URL: ${{ secrets.HORIZON_WEBHOOK_URL }}
+          HORIZON_PAID_FEISHU_URL: ${{ secrets.HORIZON_PAID_FEISHU_URL }}
+        run: |
+          missing=0
+          for name in DEEPSEEK_API_KEY APIFY_TOKEN HORIZON_WEBHOOK_URL; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Missing required GitHub Actions secret: ${name}"
+              missing=1
+            fi
+          done
 
-      - name: Set current date as environment variable
-        run: echo "DATE=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
+          if [ -z "${HORIZON_PAID_FEISHU_URL}" ]; then
+            echo "::warning::HORIZON_PAID_FEISHU_URL is not set; paid Feishu delivery will be skipped."
+          fi
 
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./docs
-          keep_files: true  # Keep existing summaries on gh-pages branch
-          commit_message: "📝 Daily Summary: ${{ env.DATE }}"
-          publish_branch: gh-pages
-          enable_jekyll: true
+          exit "$missing"
+
+      - name: Prepare GitHub Actions config
+        run: |
+          cp data/config.github.json data/config.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          config = json.loads(Path("data/config.json").read_text(encoding="utf-8"))
+          if config.get("publishing", {}).get("auto_publish") is not False:
+              raise SystemExit("publishing.auto_publish must stay false in GitHub Actions")
+          PY
+
+      - name: Run Xinxianxing pipeline
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
+          HORIZON_WEBHOOK_URL: ${{ secrets.HORIZON_WEBHOOK_URL }}
+          HORIZON_PAID_FEISHU_URL: ${{ secrets.HORIZON_PAID_FEISHU_URL }}
+        run: uv run horizon --hours 24
+
+      - name: Ensure published posts were not changed
+        run: |
+          if ! git diff --quiet -- docs/_posts; then
+            git diff -- docs/_posts
+            echo "::error::docs/_posts changed during the automated draft run. Publish posts manually only."
+            exit 1
+          fi
+
+      - name: Set current date
+        run: echo "DATE=$(date -u +'%Y-%m-%d')" >> "$GITHUB_ENV"
+
+      - name: Commit generated drafts and share image
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          mkdir -p data/drafts docs/_drafts data/share_images
+          git add data/drafts/ docs/_drafts/ data/share_images/
+
+          if git diff --cached --quiet; then
+            echo "No generated draft or share image changes to commit."
+            exit 0
+          fi
+
+          git commit -m "chore: daily 信先行 draft ${DATE}"
+          git push

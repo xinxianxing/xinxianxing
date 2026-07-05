@@ -16,7 +16,7 @@ from .tag_aliases import get_tag_aliases
 
 
 API_BASE_URL = os.environ.get(
-    "HORIZON_API_URL", "https://horizon1123.top"
+    "HORIZON_API_URL", "https://xinxianxing.com"
 )
 PRESETS_ENDPOINT = f"{API_BASE_URL}/api/presets"
 REQUEST_TIMEOUT = 10  # seconds

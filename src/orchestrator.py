@@ -2,8 +2,9 @@
 
 import asyncio
 from collections import defaultdict
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
-from typing import List, Dict
+from typing import List, Dict, Optional
 from urllib.parse import urlparse
 import httpx
 from rich.console import Console
@@ -12,12 +13,14 @@ from .models import Config, ContentItem
 from .storage.manager import StorageManager
 from .services.email import EmailManager
 from .services.webhook import WebhookNotifier
+from .services.share_image import generate_share_image
 from .scrapers.github import GitHubScraper
 from .scrapers.hackernews import HackerNewsScraper
 from .scrapers.rss import RSSScraper
 from .scrapers.reddit import RedditScraper
 from .scrapers.telegram import TelegramScraper
 from .scrapers.twitter import TwitterScraper
+from .scrapers.twitter_playwright import TwitterPlaywrightScraper
 from .scrapers.openbb import OpenBBScraper
 from .scrapers.ossinsight import OSSInsightScraper
 from .ai.client import create_ai_client
@@ -25,6 +28,17 @@ from .ai.analyzer import ContentAnalyzer
 from .ai.summarizer import DailySummarizer
 from .ai.enricher import ContentEnricher
 from .ai.tokens import get_usage_snapshot
+
+
+@dataclass
+class BalancedDigestResult:
+    """Items and selection statistics from balanced digest filtering."""
+
+    items: List[ContentItem]
+    enabled: bool = False
+    group_counts: Dict[str, int] = field(default_factory=dict)
+    group_limits: Dict[str, Optional[int]] = field(default_factory=dict)
+    duplicate_categories: List[str] = field(default_factory=list)
 
 
 class HorizonOrchestrator:
@@ -42,7 +56,11 @@ class HorizonOrchestrator:
         self.console = Console()
         self.email_manager = EmailManager(config.email, console=self.console) if config.email else None
         self.webhook_notifier = (
-            WebhookNotifier(config.webhook, console=self.console)
+            WebhookNotifier(
+                config.webhook,
+                console=self.console,
+                site_base_url=config.site.base_url,
+            )
             if config.webhook and config.webhook.enabled
             else None
         )
@@ -53,7 +71,7 @@ class HorizonOrchestrator:
         Args:
             force_hours: Optional override for time window in hours
         """
-        self.console.print("[bold cyan]🌅 Horizon - Starting aggregation...[/bold cyan]\n")
+        self.console.print("[bold cyan]🌅 信先行 - Starting aggregation...[/bold cyan]\n")
 
         # Check email subscriptions if configured
         if (
@@ -114,6 +132,16 @@ class HorizonOrchestrator:
             # 5.6 Optional second-stage Twitter reply expansion + targeted re-analysis
             await self._expand_twitter_discussion(important_items)
 
+            paid_webhook_items = [
+                item for item in important_items
+                if item.ai_score and item.ai_score >= threshold
+            ]
+            paid_webhook_items.sort(key=lambda x: x.ai_score or 0, reverse=True)
+
+            # 5.7 Apply per-category and global digest limits before enrichment
+            balanced_result = self.apply_balanced_digest(important_items)
+            important_items = balanced_result.items
+
             # Show per-sub-source selection breakdown
             selected_counts: Dict[str, int] = defaultdict(int)
             for item in important_items:
@@ -128,29 +156,39 @@ class HorizonOrchestrator:
 
             # 7. Generate and save daily summaries for each configured language
             today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+            share_image_draft_path = None
             for lang in self.config.ai.languages:
                 summarizer = DailySummarizer()
                 summary = await summarizer.generate_summary(important_items, today, len(all_items), language=lang)
+                auto_publish = self.config.publishing.auto_publish
 
-                # Save to data/summaries/
-                summary_path = self.storage.save_daily_summary(today, summary, language=lang)
-                self.console.print(f"💾 Saved {lang.upper()} summary to: {summary_path}\n")
+                if auto_publish:
+                    summary_path = self.storage.save_daily_summary(today, summary, language=lang)
+                    self.console.print(f"💾 Saved {lang.upper()} summary to: {summary_path}\n")
+                else:
+                    summary_path = self.storage.save_daily_draft(today, summary, language=lang)
+                    self.console.print(f"📝 Saved {lang.upper()} draft for review to: {summary_path}\n")
+                    if lang == "zh" or share_image_draft_path is None:
+                        share_image_draft_path = summary_path
 
-                # Copy to docs/ for GitHub Pages
+                # Copy to docs/_drafts by default. Only copy to _posts when explicitly enabled.
                 try:
                     from pathlib import Path
 
                     post_filename = f"{today}-summary-{lang}.md"
-                    posts_dir = Path("docs/_posts")
-                    posts_dir.mkdir(parents=True, exist_ok=True)
+                    docs_dir = Path("docs/_posts" if auto_publish else "docs/_drafts")
+                    docs_dir.mkdir(parents=True, exist_ok=True)
 
-                    dest_path = posts_dir / post_filename
+                    dest_path = docs_dir / post_filename
 
                     # Add Jekyll front matter
+                    page_title = (
+                        f"信先行 Action Cards: {today} ({lang.upper()})"
+                    )
                     front_matter = (
                         "---\n"
                         "layout: default\n"
-                        f"title: \"Horizon Summary: {today} ({lang.upper()})\"\n"
+                        f"title: \"{page_title}\"\n"
                         f"date: {today}\n"
                         f"lang: {lang}\n"
                         "---\n\n"
@@ -167,15 +205,18 @@ class HorizonOrchestrator:
                     with open(dest_path, "w", encoding="utf-8") as f:
                         f.write(front_matter + summary_content)
 
-                    self.console.print(f"📄 Copied {lang.upper()} summary to GitHub Pages: {dest_path}\n")
+                    if auto_publish:
+                        self.console.print(f"📄 Published {lang.upper()} summary to GitHub Pages: {dest_path}\n")
+                    else:
+                        self.console.print(f"📝 Copied {lang.upper()} review draft to: {dest_path}\n")
                 except Exception as e:
-                    self.console.print(f"[yellow]⚠️  Failed to copy {lang.upper()} summary to docs/: {e}[/yellow]\n")
+                    self.console.print(f"[yellow]⚠️  Failed to copy {lang.upper()} summary draft to docs/: {e}[/yellow]\n")
 
                 # Send email if configured
                 if self.email_manager and self.config.email and self.config.email.enabled:
                     self.console.print(f"📧 Sending {lang.upper()} email summary...")
                     subscribers = self.storage.load_subscribers()
-                    subject = f"Horizon Summary ({lang.upper()}) - {today}"
+                    subject = f"信先行 Summary ({lang.upper()}) - {today}"
                     self.email_manager.send_daily_summary(summary, subject, subscribers)
 
                 # Send webhook notification if configured
@@ -187,9 +228,24 @@ class HorizonOrchestrator:
                         date=today,
                         lang=lang,
                         summarizer=summarizer,
+                        paid_items=paid_webhook_items,
+                        score_threshold=threshold,
                     )
 
-            self.console.print("[bold green]✅ Horizon completed successfully![/bold green]")
+            if share_image_draft_path:
+                try:
+                    share_image_path = generate_share_image(
+                        share_image_draft_path,
+                        output_dir=self.storage.share_images_dir,
+                        date=today,
+                    )
+                    self.console.print(f"🖼️  Saved share image to: {share_image_path}\n")
+                except Exception as e:
+                    self.console.print(
+                        f"[yellow]⚠️  Failed to generate share image: {e}[/yellow]\n"
+                    )
+
+            self.console.print("[bold green]✅ 信先行 completed successfully![/bold green]")
             usage = get_usage_snapshot()
             if usage.total_tokens > 0:
                 self.console.print(
@@ -264,9 +320,13 @@ class HorizonOrchestrator:
                 telegram_scraper = TelegramScraper(self.config.sources.telegram, client)
                 tasks.append(self._fetch_with_progress("Telegram", telegram_scraper, since))
 
-            # Twitter
+            # Twitter (Apify or Playwright mode)
             if self.config.sources.twitter and self.config.sources.twitter.enabled:
-                twitter_scraper = TwitterScraper(self.config.sources.twitter, client)
+                tw_cfg = self.config.sources.twitter
+                if tw_cfg.mode == "playwright":
+                    twitter_scraper = TwitterPlaywrightScraper(tw_cfg)
+                else:
+                    twitter_scraper = TwitterScraper(tw_cfg, client)
                 tasks.append(self._fetch_with_progress("Twitter", twitter_scraper, since))
 
             # OpenBB (financial news / filings via the OpenBB Platform SDK)
@@ -464,6 +524,116 @@ class HorizonOrchestrator:
 
         return [item for i, item in enumerate(items) if i not in drop_indices]
 
+    def apply_balanced_digest(
+        self,
+        items: List[ContentItem],
+        *,
+        log: bool = True,
+    ) -> BalancedDigestResult:
+        """Apply configured category quotas and the final item cap.
+
+        Categories are read from ``item.metadata["category"]``. If a category
+        appears in more than one configured group, the first group in config
+        order wins.
+        """
+        filtering = self.config.filtering
+        groups = filtering.category_groups
+        max_items = filtering.max_items
+
+        if not groups and max_items is None:
+            return BalancedDigestResult(items=items)
+
+        sorted_items = sorted(
+            items,
+            key=lambda item: item.ai_score or 0,
+            reverse=True,
+        )
+
+        category_to_group: Dict[str, str] = {}
+        duplicate_categories: List[str] = []
+        for group_key, group in groups.items():
+            for category in group.categories:
+                if category in category_to_group:
+                    if category_to_group[category] != group_key:
+                        duplicate_categories.append(category)
+                    continue
+                category_to_group[category] = group_key
+
+        if log:
+            for category in sorted(set(duplicate_categories)):
+                first_group = category_to_group[category]
+                self.console.print(
+                    f"[yellow]Warning: category '{category}' is configured in multiple "
+                    f"groups; using '{first_group}'.[/yellow]"
+                )
+
+        selected: List[tuple[ContentItem, str]] = []
+        group_counts: Dict[str, int] = defaultdict(int)
+        default_group = filtering.default_group
+
+        for item in sorted_items:
+            category = item.metadata.get("category")
+            group_key = (
+                category_to_group.get(category, default_group)
+                if isinstance(category, str)
+                else default_group
+            )
+
+            if group_key in groups:
+                limit = groups[group_key].limit
+            else:
+                limit = filtering.default_group_limit
+
+            if limit is not None and group_counts[group_key] >= limit:
+                continue
+
+            selected.append((item, group_key))
+            group_counts[group_key] += 1
+
+        if max_items is not None:
+            selected = selected[:max_items]
+
+        final_counts: Dict[str, int] = defaultdict(int)
+        for _, group_key in selected:
+            final_counts[group_key] += 1
+
+        group_limits: Dict[str, Optional[int]] = {
+            group_key: group.limit for group_key, group in groups.items()
+        }
+        group_limits.setdefault(default_group, filtering.default_group_limit)
+
+        if log:
+            self.console.print(
+                f"⚖️ Balanced digest selected {len(selected)}/{len(items)} items"
+            )
+            for group_key, group in groups.items():
+                label = group.name or group_key
+                self.console.print(
+                    f"      • {label}: {final_counts.get(group_key, 0)}/{group.limit}"
+                )
+            if (
+                final_counts.get(default_group, 0)
+                or filtering.default_group_limit is not None
+            ):
+                limit_label = (
+                    str(filtering.default_group_limit)
+                    if filtering.default_group_limit is not None
+                    else "unlimited"
+                )
+                self.console.print(
+                    f"      • {default_group}: "
+                    f"{final_counts.get(default_group, 0)}/{limit_label}"
+                )
+            self.console.print("")
+
+        return BalancedDigestResult(
+            items=[item for item, _ in selected],
+            enabled=True,
+            group_counts=dict(final_counts),
+            group_limits=group_limits,
+            duplicate_categories=sorted(set(duplicate_categories)),
+        )
+
     async def _expand_twitter_discussion(self, items: List[ContentItem]) -> None:
         """Second-stage: fetch reply text for important Twitter items and re-analyze.
 
@@ -489,6 +659,11 @@ class HorizonOrchestrator:
         )
 
         async with httpx.AsyncClient(timeout=30.0) as client:
+            if tw_cfg.mode == "playwright":
+                self.console.print(
+                    "   [yellow]Reply expansion not yet supported in Playwright mode.[/yellow]"
+                )
+                return
             scraper = TwitterScraper(tw_cfg, client)
             expanded = []
             for item in twitter_items:

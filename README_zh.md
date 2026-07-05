@@ -1,30 +1,34 @@
 <div align="center">
 
-# 🌅 Horizon
+<h1>🌅 信先行</h1>
 
-**你只需享受新闻，剩下交给 Horizon。**
+<p><strong>你只需关注 AI 信息差，剩下交给信先行。</strong></p>
 
-[![License](https://img.shields.io/badge/license-MIT-green.svg?style=flat-square)](LICENSE)
-[![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json&style=flat-square)](https://github.com/astral-sh/uv)
-[![Daily Summary](https://github.com/Thysrael/Horizon/actions/workflows/deploy-docs.yml/badge.svg?style=flat-square)](https://thysrael.github.io/Horizon/)
-[![GitHub commit activity](https://img.shields.io/github/commit-activity/m/Thysrael/Horizon?style=flat-square)](https://github.com/Thysrael/Horizon/commits/main)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](http://makeapullrequest.com)
-![Sources Welcome](https://img.shields.io/badge/📡_sources-welcome-f97316?style=flat-square)
- <a href="https://hellogithub.com/repository/Thysrael/Horizon" target="_blank"><img src="https://api.hellogithub.com/v1/widgets/recommend.svg?rid=7a4b606e28e4477998d35851cf4fdddf&claim_uid=rtjnLkYT7ziQJUG&theme=small" alt="Featured｜HelloGitHub" /></a>
-
+<a href="https://trendshift.io/repositories/22864?utm_source=trendshift-badge&amp;utm_medium=badge&amp;utm_campaign=badge-trendshift-22864" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/trendshift/repositories/22864/daily" alt="Thysrael%2FHorizon | Trendshift" width="250" height="55"/></a>
+<a href="https://trendshift.io/repositories/22864?utm_source=trendshift-badge&amp;utm_medium=badge&amp;utm_campaign=badge-trendshift-22864" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/trendshift/repositories/22864/weekly?language=Python" alt="Thysrael%2FHorizon | Trendshift" width="250" height="55"/></a>
+<a href="https://hellogithub.com/repository/Thysrael/Horizon" target="_blank"><img src="https://abroad.hellogithub.com/v1/widgets/recommend.svg?rid=7a4b606e28e4477998d35851cf4fdddf&claim_uid=rtjnLkYT7ziQJUG" alt="Featured｜HelloGitHub" style="width: 250px; height: 54px;" width="250" height="54" /></a>
 <br>
 
+[![License](https://img.shields.io/badge/license-MIT-green.svg?style=for-the-badge&logo=opensourceinitiative&logoColor=white)](LICENSE)
+[![Tool uv](https://img.shields.io/badge/Tool-uv-4B275F?style=for-the-badge&logo=uv&logoColor=white)](https://github.com/astral-sh/uv)
+[![Website](https://img.shields.io/badge/Website-xinxianxing-263238?style=for-the-badge&logo=homepage&logoColor=white)](https://xinxianxing.com/)
+[![Daily](https://img.shields.io/github/actions/workflow/status/Thysrael/Horizon/deploy-docs.yml?branch=main&label=Daily&style=for-the-badge&logo=date-fns&logoColor=white)](https://xinxianxing.com/)
+[![Commit](https://img.shields.io/github/commit-activity/m/Thysrael/Horizon?label=Commit&style=for-the-badge&logo=github&logoColor=white)](https://github.com/Thysrael/Horizon/commits/main)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=for-the-badge&logo=github&logoColor=white)](https://github.com/Thysrael/Horizon/pulls)
+![Sources Welcome](https://img.shields.io/badge/sources-welcome-f97316?style=for-the-badge&logo=rss&logoColor=white)
+
 ![Claude](https://img.shields.io/badge/Claude-f0daba?style=flat-square&logo=anthropic&logoColor=black)
-![GPT](https://img.shields.io/badge/GPT-412991?style=flat-square)
-![Gemini](https://img.shields.io/badge/Gemini-8E75B2?style=flat-square&logo=google&logoColor=white)
-![DeepSeek](https://img.shields.io/badge/DeepSeek-0A6DC2?style=flat-square)
-![Doubao](https://img.shields.io/badge/Doubao-00D6C2?style=flat-square)
-![MiniMax](https://img.shields.io/badge/MiniMax-FF6F00?style=flat-square)
-![OpenClaw](https://img.shields.io/badge/OpenClaw-C83232?style=flat-square)
+![GPT](https://img.shields.io/badge/GPT-10A37F?style=flat-square&logo=data:image/svg%2bxml;base64,PHN2ZyByb2xlPSJpbWciIHZpZXdCb3g9IjAgMCAyNCAyNCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBmaWxsPSJ3aGl0ZSIgZD0iTTIyLjI4MTkgOS44MjExYTUuOTg0NyA1Ljk4NDcgMCAwIDAtLjUxNTctNC45MTA4IDYuMDQ2MiA2LjA0NjIgMCAwIDAtNi41MDk4LTIuOUE2LjA2NTEgNi4wNjUxIDAgMCAwIDQuOTgwNyA0LjE4MThhNS45ODQ3IDUuOTg0NyAwIDAgMC0zLjk5NzcgMi45IDYuMDQ2MiA2LjA0NjIgMCAwIDAgLjc0MjcgNy4wOTY2IDUuOTggNS45OCAwIDAgMCAuNTExIDQuOTEwNyA2LjA1MSA2LjA1MSAwIDAgMCA2LjUxNDYgMi45MDAxQTUuOTg0NyA1Ljk4NDcgMCAwIDAgMTMuMjU5OSAyNGE2LjA1NTcgNi4wNTU3IDAgMCAwIDUuNzcxOC00LjIwNTggNS45ODk0IDUuOTg5NCAwIDAgMCAzLjk5NzctMi45MDAxIDYuMDU1NyA2LjA1NTcgMCAwIDAtLjc0NzUtNy4wNzI5em0tOS4wMjIgMTIuNjA4MWE0LjQ3NTUgNC40NzU1IDAgMCAxLTIuODc2NC0xLjA0MDhsLjE0MTktLjA4MDQgNC43NzgzLTIuNzU4MmEuNzk0OC43OTQ4IDAgMCAwIC4zOTI3LS42ODEzdi02LjczNjlsMi4wMiAxLjE2ODZhLjA3MS4wNzEgMCAwIDEgLjAzOC4wNTJ2NS41ODI2YTQuNTA0IDQuNTA0IDAgMCAxLTQuNDk0NSA0LjQ5NDR6bS05LjY2MDctNC4xMjU0YTQuNDcwOCA0LjQ3MDggMCAwIDEtLjUzNDYtMy4wMTM3bC4xNDIuMDg1MiA0Ljc4MyAyLjc1ODJhLjc3MTIuNzcxMiAwIDAgMCAuNzgwNiAwbDUuODQyOC0zLjM2ODV2Mi4zMzI0YS4wODA0LjA4MDQgMCAwIDEtLjAzMzIuMDYxNUw5Ljc0IDE5Ljk1MDJhNC40OTkyIDQuNDk5MiAwIDAgMS02LjE0MDgtMS42NDY0ek0yLjM0MDggNy44OTU2YTQuNDg1IDQuNDg1IDAgMCAxIDIuMzY1NS0xLjk3MjhWMTEuNmEuNzY2NC43NjY0IDAgMCAwIC4zODc5LjY3NjVsNS44MTQ0IDMuMzU0My0yLjAyMDEgMS4xNjg1YS4wNzU3LjA3NTcgMCAwIDEtLjA3MSAwbC00LjgzMDMtMi43ODY1QTQuNTA0IDQuNTA0IDAgMCAxIDIuMzQwOCA3Ljg3MnptMTYuNTk2MyAzLjg1NThMMTMuMTAzOCA4LjM2NCAxNS4xMTkyIDcuMmEuMDc1Ny4wNzU3IDAgMCAxIC4wNzEgMGw0LjgzMDMgMi43OTEzYTQuNDk0NCA0LjQ5NDQgMCAwIDEtLjY3NjUgOC4xMDQydi01LjY3NzJhLjc5Ljc5IDAgMCAwLS40MDctLjY2N3ptMi4wMTA3LTMuMDIzMWwtLjE0Mi0uMDg1Mi00Ljc3MzUtMi43ODE4YS43NzU5Ljc3NTkgMCAwIDAtLjc4NTQgMEw5LjQwOSA5LjIyOTdWNi44OTc0YS4wNjYyLjA2NjIgMCAwIDEgLjAyODQtLjA2MTVsNC44MzAzLTIuNzg2NmE0LjQ5OTIgNC40OTkyIDAgMCAxIDYuNjgwMiA0LjY2ek04LjMwNjUgMTIuODYzbC0yLjAyLTEuMTYzOGEuMDgwNC4wODA0IDAgMCAxLS4wMzgtLjA1NjdWNi4wNzQyYTQuNDk5MiA0LjQ5OTIgMCAwIDEgNy4zNzU3LTMuNDUzN2wtLjE0Mi4wODA1TDguNzA0IDUuNDU5YS43OTQ4Ljc5NDggMCAwIDAtLjM5MjcuNjgxM3ptMS4wOTc2LTIuMzY1NGwyLjYwMi0xLjQ5OTggMi42MDY5IDEuNDk5OHYyLjk5OTRsLTIuNTk3NCAxLjQ5OTctMi42MDY3LTEuNDk5N1oiLz48L3N2Zz4=)
+![Gemini](https://img.shields.io/badge/Gemini-8E75B2?style=flat-square&logo=googlegemini&logoColor=white)
+![DeepSeek](https://img.shields.io/badge/DeepSeek-0A6DC2?style=flat-square&logo=deepseek&logoColor=white)
+![Doubao](https://img.shields.io/badge/Doubao-00D6C2?style=flat-square&logo=bytedance&logoColor=white)
+![MiniMax](https://img.shields.io/badge/MiniMax-FF6F00?style=flat-square&logo=minimax&logoColor=white)
+![OpenClaw](https://img.shields.io/badge/OpenClaw-C83232?style=flat-square&logo=data:image/svg%2bxml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2NCIgaGVpZ2h0PSI2NCIgdmlld0JveD0iMCAwIDE2IDE2IiBhcmlhLWxhYmVsPSJQaXhlbCBsb2JzdGVyIj4KICA8cmVjdCB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIGZpbGw9Im5vbmUiLz4KICAKICA8ZyBmaWxsPSIjM2EwYTBkIj4KICAgIDxyZWN0IHg9IjEiIHk9IjUiIHdpZHRoPSIxIiBoZWlnaHQ9IjMiLz4KICAgIDxyZWN0IHg9IjIiIHk9IjQiIHdpZHRoPSIxIiBoZWlnaHQ9IjEiLz4KICAgIDxyZWN0IHg9IjIiIHk9IjgiIHdpZHRoPSIxIiBoZWlnaHQ9IjEiLz4KICAgIDxyZWN0IHg9IjMiIHk9IjMiIHdpZHRoPSIxIiBoZWlnaHQ9IjEiLz4KICAgIDxyZWN0IHg9IjMiIHk9IjkiIHdpZHRoPSIxIiBoZWlnaHQ9IjEiLz4KICAgIDxyZWN0IHg9IjQiIHk9IjIiIHdpZHRoPSIxIiBoZWlnaHQ9IjEiLz4KICAgIDxyZWN0IHg9IjQiIHk9IjEwIiB3aWR0aD0iMSIgaGVpZ2h0PSIxIi8+CiAgICA8cmVjdCB4PSI1IiB5PSIyIiB3aWR0aD0iNiIgaGVpZ2h0PSIxIi8+CiAgICA8cmVjdCB4PSIxMSIgeT0iMiIgd2lkdGg9IjEiIGhlaWdodD0iMSIvPgogICAgPHJlY3QgeD0iMTIiIHk9IjMiIHdpZHRoPSIxIiBoZWlnaHQ9IjEiLz4KICAgIDxyZWN0IHg9IjEyIiB5PSI5IiB3aWR0aD0iMSIgaGVpZ2h0PSIxIi8+CiAgICA8cmVjdCB4PSIxMyIgeT0iNCIgd2lkdGg9IjEiIGhlaWdodD0iMSIvPgogICAgPHJlY3QgeD0iMTMiIHk9IjgiIHdpZHRoPSIxIiBoZWlnaHQ9IjEiLz4KICAgIDxyZWN0IHg9IjE0IiB5PSI1IiB3aWR0aD0iMSIgaGVpZ2h0PSIzIi8+CiAgICA8cmVjdCB4PSI1IiB5PSIxMSIgd2lkdGg9IjYiIGhlaWdodD0iMSIvPgogICAgPHJlY3QgeD0iNCIgeT0iMTIiIHdpZHRoPSIxIiBoZWlnaHQ9IjEiLz4KICAgIDxyZWN0IHg9IjExIiB5PSIxMiIgd2lkdGg9IjEiIGhlaWdodD0iMSIvPgogICAgPHJlY3QgeD0iMyIgeT0iMTMiIHdpZHRoPSIxIiBoZWlnaHQ9IjEiLz4KICAgIDxyZWN0IHg9IjEyIiB5PSIxMyIgd2lkdGg9IjEiIGhlaWdodD0iMSIvPgogICAgPHJlY3QgeD0iNSIgeT0iMTQiIHdpZHRoPSI2IiBoZWlnaHQ9IjEiLz4KICA8L2c+CgogIAogIDxnIGZpbGw9IiNmZjRmNDAiPgogICAgPHJlY3QgeD0iNSIgeT0iMyIgd2lkdGg9IjYiIGhlaWdodD0iMSIvPgogICAgPHJlY3QgeD0iNCIgeT0iNCIgd2lkdGg9IjgiIGhlaWdodD0iMSIvPgogICAgPHJlY3QgeD0iMyIgeT0iNSIgd2lkdGg9IjEwIiBoZWlnaHQ9IjEiLz4KICAgIDxyZWN0IHg9IjMiIHk9IjYiIHdpZHRoPSIxMCIgaGVpZ2h0PSIxIi8+CiAgICA8cmVjdCB4PSIzIiB5PSI3IiB3aWR0aD0iMTAiIGhlaWdodD0iMSIvPgogICAgPHJlY3QgeD0iNCIgeT0iOCIgd2lkdGg9IjgiIGhlaWdodD0iMSIvPgogICAgPHJlY3QgeD0iNSIgeT0iOSIgd2lkdGg9IjYiIGhlaWdodD0iMSIvPgogICAgPHJlY3QgeD0iNSIgeT0iMTIiIHdpZHRoPSI2IiBoZWlnaHQ9IjEiLz4KICAgIDxyZWN0IHg9IjYiIHk9IjEzIiB3aWR0aD0iNCIgaGVpZ2h0PSIxIi8+CiAgPC9nPgoKICAKICA8ZyBmaWxsPSIjZmY3NzVmIj4KICAgIDxyZWN0IHg9IjEiIHk9IjYiIHdpZHRoPSIyIiBoZWlnaHQ9IjEiLz4KICAgIDxyZWN0IHg9IjIiIHk9IjUiIHdpZHRoPSIxIiBoZWlnaHQ9IjEiLz4KICAgIDxyZWN0IHg9IjIiIHk9IjciIHdpZHRoPSIxIiBoZWlnaHQ9IjEiLz4KICAgIDxyZWN0IHg9IjEzIiB5PSI2IiB3aWR0aD0iMiIgaGVpZ2h0PSIxIi8+CiAgICA8cmVjdCB4PSIxMyIgeT0iNSIgd2lkdGg9IjEiIGhlaWdodD0iMSIvPgogICAgPHJlY3QgeD0iMTMiIHk9IjciIHdpZHRoPSIxIiBoZWlnaHQ9IjEiLz4KICA8L2c+CgogIAogIDxnIGZpbGw9IiMwODEwMTYiPgogICAgPHJlY3QgeD0iNiIgeT0iNSIgd2lkdGg9IjEiIGhlaWdodD0iMSIvPgogICAgPHJlY3QgeD0iOSIgeT0iNSIgd2lkdGg9IjEiIGhlaWdodD0iMSIvPgogIDwvZz4KICA8ZyBmaWxsPSIjZjVmYmZmIj4KICAgIDxyZWN0IHg9IjYiIHk9IjQiIHdpZHRoPSIxIiBoZWlnaHQ9IjEiLz4KICAgIDxyZWN0IHg9IjkiIHk9IjQiIHdpZHRoPSIxIiBoZWlnaHQ9IjEiLz4KICA8L2c+Cjwvc3ZnPgoK)
+![Ollama](https://img.shields.io/badge/Ollama-FFFFFF?style=flat-square&logo=Ollama&logoColor=black)
 
 📡 构建你专属的 AI 新闻雷达，生成中英双语日报。 | Your own AI-powered news radar.
 
-[📖 在线演示](https://thysrael.github.io/Horizon/) · [📋 配置指南](https://thysrael.github.io/Horizon/configuration) · [English](README.md)
+[📖 在线演示](https://xinxianxing.com/) · [📋 配置指南](https://xinxianxing.com/configuration) · [English](README.md) · [日本語](README_ja.md)
 
 </div>
 
@@ -64,11 +68,11 @@
 </table>
 </details>
 
-## 为什么需要 Horizon？
+## 为什么需要信先行？
 
-好新闻分散在各处，坏信息却源源不断。Horizon 为你先完成第一轮筛选：从 Hacker News、Reddit、Telegram、RSS、Twitter/X、GitHub 和 OpenBB 抓取内容，合并重复新闻，用 AI 打分过滤，并为重要内容补充背景解释和社区讨论。
+AI 教程、赚钱案例和效率技巧分散在各个平台。信先行先完成第一轮筛选：从 Reddit、RSS、Twitter/X、Product Hunt、Hacker News 等来源抓取内容，生成便于审核和发布的 Action Card。
 
-但 Horizon 不只是又一个摘要工具。AI 很擅长降低噪声，但新闻仍然需要人的品味：你信任哪些信息源，哪些评论改变了你对事件的理解，哪些小众来源值得被更多人看见。Horizon 通过可定制的信息源、筛选标准、模型、语言、分发方式、评论摘要和社区信息源官网，把这层“人味”保留下来。
+但信先行不只是摘要工具。它更像一个内容雷达：把教程技巧、赚钱案例和效率方法整理成结构化卡片，同时保留人工审核、收藏、忽略和发布前筛选的空间。
 
 ## 功能特性
 
@@ -165,6 +169,14 @@ flowchart LR
 6. **总结** — 生成结构化的 Markdown 日报，包含摘要、标签和参考链接。
 7. **分发** — 将结果发布到 GitHub Pages、邮件、飞书等 webhook、MCP 或本地文件。
 
+## 赞助
+
+信先行基于原开源项目改造。如果你愿意支持这个项目，或希望出现在这里，欢迎[创建一个 Issue](https://github.com/Thysrael/Horizon/issues/new) 或[发邮件](mailto:thysrael@163.com)联系我。
+
+| 支持方 | 说明 |
+|--------|------|
+| [<img src="docs/assets/compshare-logo.png" alt="Compshare / 优云智算" width="220" />](https://www.compshare.cn/?ytag=GPU_YY_git_Horizon) | 优云智算目前正在支持信先行的上游项目。优云智算是 UCloud 旗下 AI 云平台，主打包月、按次的高性价比国模 Agent Plan 套餐，低至 49 元/月起，同时提供官转稳定海外模型。支持接入 Claude Code、Codex 及 API 调用，支持企业高并发、7*24 技术支持和自助开票。<br><br>通过其[链接](https://www.compshare.cn/?ytag=GPU_YY_git_Horizon)注册，可获得 5 元平台体验金。 |
+
 ## 快速开始
 
 ### 1. 安装
@@ -211,10 +223,10 @@ cp data/config.example.json data/config.json
 # 编辑 .env 和 data/config.json，填入你的 API 密钥和偏好设置
 
 # 使用 Docker Compose 运行
-docker-compose run --rm horizon
+docker compose run --rm horizon
 
 # 或自定义时间窗口
-docker-compose run --rm horizon --hours 48
+docker compose run --rm horizon --hours 48
 ```
 
 ### 2. 配置
@@ -225,7 +237,7 @@ docker-compose run --rm horizon --hours 48
 uv run horizon-wizard
 ```
 
-向导会询问你的兴趣（如"LLM 推理"、"嵌入式"、"web 安全"），自动推荐并生成 `data/config.json`，还可选让 AI 补充推荐小众源。若你想分享信息源，请前往 [horizon1123.top](https://horizon1123.top/)。
+向导会询问你的兴趣（如"LLM 推理"、"嵌入式"、"web 安全"），自动推荐并生成 `data/config.json`，还可选让 AI 补充推荐小众源。若你想分享信息源，请前往 [xinxianxing.com](https://xinxianxing.com/)。
 
 **方式 B：手动配置**
 
@@ -254,6 +266,35 @@ cp data/config.example.json data/config.json  # 自定义信息源
 }
 ```
 
+**均衡日报（可选）**
+
+可以限制日报总条数，并避免单一类别占据过多内容。类别来自
+`sources.rss[].category` 等信息源配置。
+
+```jsonc
+{
+  "filtering": {
+    "ai_score_threshold": 6.0,
+    "max_items": 20,
+    "category_groups": {
+      "ai": {
+        "limit": 5,
+        "categories": ["ai-news", "ai-tools", "machine-learning"]
+      },
+      "finance": {
+        "limit": 5,
+        "categories": ["finance", "business", "equities"]
+      }
+    },
+    "default_group": "other",
+    "default_group_limit": 3
+  }
+}
+```
+
+分组限额在 AI 分数过滤之后、内容补充之前执行。未配置
+`category_groups` 和 `max_items` 时，筛选行为保持不变。
+
 `data/config.json` 里的任意字符串值都可以通过 `${VAR_NAME}` 引用环境变量。这适合用于 `ai.base_url`、私有 RSS 链接、Webhook 地址或自定义请求头模板等字段。
 
 完整配置参考请查看[配置指南](docs/configuration.md)。
@@ -270,15 +311,15 @@ uv run horizon --hours 48   # 抓取最近 48 小时的内容
 #### 使用 Docker
 
 ```bash
-docker-compose run --rm horizon              # 使用默认 24 小时窗口
-docker-compose run --rm horizon --hours 48   # 抓取最近 48 小时的内容
+docker compose run --rm horizon              # 使用默认 24 小时窗口
+docker compose run --rm horizon --hours 48   # 抓取最近 48 小时的内容
 ```
 
 生成的日报将保存在 `data/summaries/` 目录中。
 
 ### 4. 自动化（可选）
 
-Horizon 非常适合作为 **GitHub Actions** 定时任务运行。查看 [`.github/workflows/daily-summary.yml`](.github/workflows/daily-summary.yml) 获取现成的工作流配置，可自动生成日报并部署到 GitHub Pages。
+信先行非常适合作为 **GitHub Actions** 定时任务运行。查看 [`.github/workflows/daily-summary.yml`](.github/workflows/daily-summary.yml) 获取现成的工作流配置，可自动生成 Action Card 并部署到 GitHub Pages。
 
 ## 支持的信息源
 
@@ -294,7 +335,7 @@ Horizon 非常适合作为 **GitHub Actions** 定时任务运行。查看 [`.git
 
 ## 日报可以去哪里
 
-Horizon 支持通过多种方式发布和分发生成的日报：
+信先行支持通过多种方式发布和分发生成的 Action Card：
 
 | 方式 | 作用 |
 |------|------|
@@ -310,13 +351,13 @@ Horizon 支持通过多种方式发布和分发生成的日报：
 | 文档 | 内容 |
 |------|------|
 | [配置指南](docs/configuration.md) | AI 模型、信息源、过滤、邮件、Webhook、GitHub Pages 和 MCP 配置 |
-| [评分机制](docs/scoring.md) | Horizon 如何评估和排序新闻 |
+| [评分机制](docs/scoring.md) | 信先行如何评估和排序内容 |
 | [抓取器](docs/scrapers.md) | 信息源抓取器说明和扩展细节 |
 | [MCP 工具](src/mcp/README.md) | MCP 客户端可调用的工具说明 |
 
 ## 项目状态
 
-Horizon 已经支持完整的日报流程：多源抓取、AI 打分、去重、背景补充、评论摘要、双语生成、GitHub Pages 发布、邮件分发、Webhook 推送、Docker 部署、MCP 集成和配置向导。
+信先行已经支持完整的内容聚合流程：多源抓取、AI 打分、去重、Action Card 生成、草稿审核、GitHub Pages 发布、邮件分发、Webhook 推送、Docker 部署、MCP 集成和配置向导。
 
 计划中的改进：
 
@@ -331,7 +372,7 @@ Horizon 已经支持完整的日报流程：多源抓取、AI 打分、去重、
 
 ### 分享信息源
 
-想把有价值的信息源分享给 Horizon 社区？请直接前往 **[horizon1123.top](https://horizon1123.top)** 提交。
+想把有价值的信息源分享给信先行？请直接前往 **[xinxianxing.com](https://xinxianxing.com)** 提交。
 
 欢迎提交：你所在领域里优质的小众 RSS 发现、活跃 subreddit 的趋势、值得关注的 GitHub 动态，或 Telegram 频道精选内容。
 

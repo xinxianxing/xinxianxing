@@ -10,7 +10,7 @@ from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn, MofNCo
 from .client import AIClient
 from .prompts import CONTENT_ANALYSIS_SYSTEM, CONTENT_ANALYSIS_USER
 from .utils import parse_json_response
-from ..models import ContentItem
+from ..models import ContentItem, SignalType
 
 DEFAULT_THROTTLE_SEC = 0.0
 
@@ -40,6 +40,40 @@ class ContentAnalyzer:
         config = getattr(self.client, "config", None)
         concurrency = getattr(config, "analysis_concurrency", 1)
         return max(concurrency, 1)
+
+    @staticmethod
+    def _as_text(value, default: str = "") -> str:
+        if value is None:
+            return default
+        if isinstance(value, str):
+            return value.strip()
+        return str(value).strip()
+
+    @staticmethod
+    def _as_list(value) -> list[str]:
+        if value is None:
+            return []
+        if isinstance(value, list):
+            return [str(x).strip() for x in value if str(x).strip()]
+        if isinstance(value, str):
+            parts = re.split(r"[,，/、\n]+", value)
+            return [part.strip() for part in parts if part.strip()]
+        return [str(value).strip()] if str(value).strip() else []
+
+    @staticmethod
+    def _as_score(value) -> float:
+        try:
+            score = float(value)
+        except (TypeError, ValueError):
+            score = 0.0
+        return min(max(score, 0.0), 10.0)
+
+    @staticmethod
+    def _as_signal_type(value) -> SignalType:
+        try:
+            return SignalType(str(value).strip().upper())
+        except ValueError:
+            return SignalType.NEWS
 
     async def analyze_batch(self, items: List[ContentItem]) -> List[ContentItem]:
         throttle_sec = self._get_throttle_sec()
@@ -155,8 +189,68 @@ class ContentAnalyzer:
             item.ai_tags = []
             return
 
-        # Update item with analysis results
-        item.ai_score = float(result.get("score", 0))
-        item.ai_reason = result.get("reason", "")
-        item.ai_summary = result.get("summary", item.title)
-        item.ai_tags = result.get("tags", [])
+        # Update item with Action Card results while preserving legacy fields.
+        original_title = item.title
+        title = self._as_text(result.get("title"), original_title)
+        intro = self._as_text(
+            result.get("intro") or result.get("what_happened"),
+            title,
+        )
+        how_to = self._as_list(result.get("how_to") or result.get("opportunities"))
+        suggested_actions = self._as_list(result.get("suggested_actions"))
+        suitable_for = self._as_list(
+            result.get("suitable_for") or result.get("who_should_care")
+        )
+        evidence = self._as_text(
+            result.get("evidence") or result.get("why_it_matters"),
+            "未提供具体数据",
+        )
+        credibility_risk = self._as_text(
+            result.get("credibility_risk") or result.get("risk")
+        )
+        score = self._as_score(result.get("score"))
+        signal_type = self._as_signal_type(result.get("signal_type"))
+        source_url = self._as_text(result.get("source_url"), str(item.url))
+
+        if signal_type == SignalType.MONEY_CASE and "幸存者偏差" not in credibility_risk:
+            money_case_warning = "网络案例可能存在夸大或幸存者偏差，请自行甄别"
+            credibility_risk = (
+                f"{credibility_risk}；{money_case_warning}"
+                if credibility_risk
+                else money_case_warning
+            )
+
+        if title and title != original_title:
+            item.metadata.setdefault("original_title", original_title)
+            item.title = title
+
+        item.intro = intro
+        item.how_to = how_to
+        item.suitable_for = suitable_for
+        item.evidence = evidence
+        item.credibility_risk = credibility_risk or None
+        item.utility_score = score
+        item.what_happened = intro
+        item.why_it_matters = evidence
+        item.who_should_care = suitable_for
+        item.opportunities = how_to
+        item.suggested_actions = suggested_actions
+        item.risk = credibility_risk or None
+        item.score = score
+        item.signal_type = signal_type
+
+        item.ai_score = score
+        item.ai_reason = evidence
+        item.ai_summary = intro
+        item.ai_tags = suitable_for
+        item.metadata["action_card"] = {
+            "title": item.title,
+            "signal_type": signal_type.value,
+            "intro": intro,
+            "how_to": how_to,
+            "suitable_for": suitable_for,
+            "evidence": evidence,
+            "credibility_risk": credibility_risk,
+            "score": score,
+            "source_url": source_url,
+        }

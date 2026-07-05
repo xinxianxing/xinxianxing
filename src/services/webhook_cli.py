@@ -85,7 +85,11 @@ def _preview_message(
 
 
 async def _run_test(
-    webhook_config, lang: str, dry_run: bool, delivery_override: str | None = None
+    webhook_config,
+    lang: str,
+    dry_run: bool,
+    delivery_override: str | None = None,
+    site_base_url: str | None = None,
 ) -> None:
     """Execute the webhook test."""
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
@@ -99,7 +103,11 @@ async def _run_test(
             update={"delivery": delivery_override}
         )
 
-    notifier = WebhookNotifier(effective_config, console=console)
+    notifier = WebhookNotifier(
+        effective_config,
+        console=console,
+        site_base_url=site_base_url,
+    )
 
     if dry_run:
         console.print(f"\n[bold yellow]── Dry Run (lang={lang}) ──[/bold yellow]")
@@ -201,7 +209,15 @@ def main() -> None:
             sys.exit(1)
 
         lang = args.lang or (config.ai.languages[0] if config.ai.languages else "en")
-        asyncio.run(_run_test(config.webhook, lang, args.dry_run, args.delivery))
+        asyncio.run(
+            _run_test(
+                config.webhook,
+                lang,
+                args.dry_run,
+                args.delivery,
+                site_base_url=config.site.base_url,
+            )
+        )
 
     except KeyboardInterrupt:
         console.print("\n[yellow]Interrupted by user[/yellow]")

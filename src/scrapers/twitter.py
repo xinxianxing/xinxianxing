@@ -3,6 +3,7 @@
 import asyncio
 import logging
 import os
+import re
 from datetime import datetime, timezone
 from html import unescape
 from typing import List, Optional
@@ -18,6 +19,23 @@ logger = logging.getLogger(__name__)
 _APIFY_BASE = "https://api.apify.com/v2"
 _POLL_INTERVAL = 3.0
 _MAX_WAIT = 180
+_TOKEN_REDACTION_RE = r"token=[^&\s']+"
+
+
+def _redact_token(text: object) -> str:
+    return re.sub(_TOKEN_REDACTION_RE, "token=<redacted>", str(text))
+
+
+def _format_apify_error(exc: object) -> str:
+    message = _redact_token(exc)
+    response = getattr(exc, "response", None)
+    if response is None:
+        return message
+
+    body = getattr(response, "text", "")
+    if body:
+        message = f"{message} | response={_redact_token(body[:500])}"
+    return message
 
 
 class TwitterScraper(BaseScraper):
@@ -32,8 +50,9 @@ class TwitterScraper(BaseScraper):
             return []
 
         users = [u.strip().lstrip("@") for u in self.config.users if u.strip()]
-        if not users:
-            logger.debug("No Twitter users configured, skipping.")
+        search_queries = [q.strip() for q in self.config.search_queries if q.strip()]
+        if not users and not search_queries:
+            logger.debug("No Twitter users or search queries configured, skipping.")
             return []
 
         token = os.environ.get(self.config.apify_token_env)
@@ -43,37 +62,67 @@ class TwitterScraper(BaseScraper):
             )
             return []
 
-        logger.info(f"Fetching Twitter (Apify) for users: {users}")
+        logger.info(
+            "Fetching Twitter (Apify) for %d users and %d search queries.",
+            len(users),
+            len(search_queries),
+        )
 
-        run_id, dataset_id = await self._start_run(token, users)
-        if not run_id:
-            return []
+        runs = self._build_run_specs(users, search_queries, since)
+        seen_ids: set[str] = set()
+        items: list[ContentItem] = []
 
-        succeeded = await self._wait_for_run(token, run_id)
-        if not succeeded:
-            return []
-
-        raw_items = await self._fetch_dataset(token, dataset_id)
-        items = []
-        for raw in raw_items:
-            if isinstance(raw, dict) and raw.get("noResults"):
+        for label, payload, source_query in runs:
+            run_id, dataset_id = await self._start_run(token, payload, label)
+            if not run_id or not dataset_id:
                 continue
-            parsed = self._parse_item(raw, since)
-            if parsed:
-                items.append(parsed)
+
+            succeeded = await self._wait_for_run(token, run_id)
+            if not succeeded:
+                continue
+
+            raw_items = await self._fetch_dataset(token, dataset_id)
+            for raw in raw_items:
+                if isinstance(raw, dict) and raw.get("noResults"):
+                    continue
+                parsed = self._parse_item(raw, since, source_query=source_query)
+                if parsed and parsed.id not in seen_ids:
+                    seen_ids.add(parsed.id)
+                    items.append(parsed)
 
         logger.info(f"Fetched {len(items)} tweets via Apify.")
         return items
 
+    def _build_run_specs(
+        self, users: List[str], search_queries: List[str], since: datetime
+    ) -> list[tuple[str, dict, Optional[str]]]:
+        runs: list[tuple[str, dict, Optional[str]]] = []
+
+        if users:
+            payload = {
+                "source_mode": "profiles",
+                "profile_urls": [f"@{user}" for user in users],
+                "search_sort": "Latest",
+                "since": since.astimezone(timezone.utc).date().isoformat(),
+                "max_items": max(100, self.config.fetch_limit),
+            }
+            runs.append(("profiles", payload, None))
+
+        for index, query in enumerate(search_queries, start=1):
+            payload = {
+                "source_mode": "search",
+                "search_query": query,
+                "search_sort": self.config.search_sort,
+                "since": since.astimezone(timezone.utc).date().isoformat(),
+                "max_items": max(100, self.config.search_limit),
+            }
+            runs.append((f"search:{index}", payload, query))
+
+        return runs
+
     async def _start_run(
-        self, token: str, users: List[str]
+        self, token: str, payload: dict, label: str = "twitter"
     ) -> tuple[Optional[str], Optional[str]]:
-        payload = {
-            "source_mode": "profiles",
-            "profile_urls": users,
-            "search_sort": "Latest",
-            "max_items": max(100, self.config.fetch_limit),
-        }
         url = f"{_APIFY_BASE}/acts/{self.config.actor_id}/runs?token={token}"
         try:
             resp = await self.client.post(url, json=payload, timeout=30.0)
@@ -84,7 +133,7 @@ class TwitterScraper(BaseScraper):
             logger.debug(f"Started Apify run {run_id}, dataset {dataset_id}")
             return run_id, dataset_id
         except Exception as exc:
-            logger.error(f"Failed to start Apify run: {exc}")
+            logger.error(f"Failed to start Apify run ({label}): {_format_apify_error(exc)}")
             return None, None
 
     async def _wait_for_run(self, token: str, run_id: str) -> bool:
@@ -101,7 +150,7 @@ class TwitterScraper(BaseScraper):
                     logger.error(f"Apify run {run_id} ended with status: {status}")
                     return False
             except Exception as exc:
-                logger.warning(f"Error polling Apify run {run_id}: {exc}")
+                logger.warning(f"Error polling Apify run {run_id}: {_format_apify_error(exc)}")
             await asyncio.sleep(_POLL_INTERVAL)
             elapsed += _POLL_INTERVAL
         logger.warning(f"Apify run {run_id} timed out after {_MAX_WAIT}s.")
@@ -114,7 +163,9 @@ class TwitterScraper(BaseScraper):
             resp.raise_for_status()
             return resp.json()
         except Exception as exc:
-            logger.error(f"Failed to fetch Apify dataset {dataset_id}: {exc}")
+            logger.error(
+                f"Failed to fetch Apify dataset {dataset_id}: {_format_apify_error(exc)}"
+            )
             return []
 
     async def fetch_replies_for_item(self, item: ContentItem) -> List[str]:
@@ -150,7 +201,9 @@ class TwitterScraper(BaseScraper):
             run_id = data["id"]
             dataset_id = data["defaultDatasetId"]
         except Exception as exc:
-            logger.warning(f"Failed to start replies run for {item.id}: {exc}")
+            logger.warning(
+                f"Failed to start replies run for {item.id}: {_format_apify_error(exc)}"
+            )
             return []
 
         if not await self._wait_for_run(token, run_id):
@@ -224,7 +277,12 @@ class TwitterScraper(BaseScraper):
             item.content = f"{marker}\n" + block
         return True
 
-    def _parse_item(self, item: dict, since: datetime) -> Optional[ContentItem]:
+    def _parse_item(
+        self,
+        item: dict,
+        since: datetime,
+        source_query: Optional[str] = None,
+    ) -> Optional[ContentItem]:
         try:
             created_at_str = item.get("created_at")
             if not created_at_str:
@@ -288,6 +346,20 @@ class TwitterScraper(BaseScraper):
             if len(text) > 50:
                 title_body += "..."
 
+            metadata = {
+                "tweet_id": numeric_id,
+                "conversation_id": conversation_id,
+                "favorite_count": item.get("favorite_count", 0),
+                "retweet_count": item.get("retweet_count", 0),
+                "reply_count": item.get("reply_count", 0),
+                "view_count": item.get("view_count"),
+                "is_reply": item.get("is_reply", False),
+                "in_reply_to_status_id": item.get("in_reply_to_status_id"),
+                "in_reply_to_screen_name": item.get("in_reply_to_screen_name"),
+            }
+            if source_query:
+                metadata["search_query"] = source_query
+
             return ContentItem(
                 id=self._generate_id(SourceType.TWITTER.value, "tweet", numeric_id),
                 source_type=SourceType.TWITTER,
@@ -296,17 +368,7 @@ class TwitterScraper(BaseScraper):
                 content=text,
                 author=author,
                 published_at=published_at,
-                metadata={
-                    "tweet_id": numeric_id,
-                    "conversation_id": conversation_id,
-                    "favorite_count": item.get("favorite_count", 0),
-                    "retweet_count": item.get("retweet_count", 0),
-                    "reply_count": item.get("reply_count", 0),
-                    "view_count": item.get("view_count"),
-                    "is_reply": item.get("is_reply", False),
-                    "in_reply_to_status_id": item.get("in_reply_to_status_id"),
-                    "in_reply_to_screen_name": item.get("in_reply_to_screen_name"),
-                },
+                metadata=metadata,
             )
         except Exception as exc:
             logger.debug(f"Failed to parse tweet: {exc}")

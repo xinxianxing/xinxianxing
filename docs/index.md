@@ -1,56 +1,92 @@
 ---
 layout: default
-title: Home
+title: 今日AI精选
 ---
-
-# Horizon
 
 <div id="lang-zh" class="lang-section" markdown="1">
 
-欢迎来到 [Horizon](https://github.com/thysrael/Horizon)，一个 AI 驱动的信息聚合系统。
+<section class="home-hero">
+  <div class="hero-copy">
+    <p class="eyebrow">AI教程 / 赚钱案例 / 效率技巧</p>
+    <h1>信先行</h1>
+    <p>每天筛掉噪声，只留下普通人值得学、值得试、值得收藏的 AI 行动卡片。</p>
+    <div class="hero-actions">
+      <a class="primary-action" href="#latest-zh">查看最新精选</a>
+      <a class="secondary-action" href="/feed-zh.xml">订阅 RSS</a>
+    </div>
+  </div>
+  <img class="hero-visual" src="/assets/brand-sunrise.svg" alt="信先行品牌视觉">
+</section>
 
-## 文档
+<section class="focus-grid" aria-label="内容栏目">
+  <article>
+    <span>教程</span>
+    <h2>照着做</h2>
+    <p>把复杂工具、提示词和工作流拆成可执行步骤，减少自己摸索的时间。</p>
+  </article>
+  <article>
+    <span>案例</span>
+    <h2>看清怎么赚钱</h2>
+    <p>记录可验证的 AI 变现案例，也标出数据缺口、夸大风险和幸存者偏差。</p>
+  </article>
+  <article>
+    <span>效率</span>
+    <h2>马上试</h2>
+    <p>优先收集能节省时间、改善产出、适合个人和小团队快速尝试的方法。</p>
+  </article>
+</section>
 
-- [配置指南](configuration) — AI 提供商、信息源、过滤规则与环境变量替换
-- [信息源采集器](scrapers) — Horizon 如何从 GitHub、Hacker News、RSS、Reddit 采集内容
-- [评分系统](scoring) — 基于 AI 的内容分析与 0-10 评分体系
-
-## 每日速递 <a class="rss-icon" href="{{ '/feed-zh.xml' | relative_url }}" aria-label="订阅中文"><svg viewBox="0 0 448 512" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M128.081 415.959c0 35.369-28.672 64.041-64.041 64.041S0 451.328 0 415.959s28.672-64.041 64.041-64.041 64.04 28.673 64.04 64.041zm175.66 47.25c-8.354-154.6-132.185-278.587-286.95-286.95C7.656 175.765 0 183.105 0 192.253v48.069c0 8.415 6.49 15.472 14.887 16.018 111.832 7.284 201.473 96.702 208.772 208.772.547 8.397 7.604 14.887 16.018 14.887h48.069c9.149.001 16.489-7.655 15.995-16.79zm144.249.288C439.596 229.677 251.465 40.445 16.503 32.01 7.473 31.686 0 38.981 0 48.016v48.068c0 8.625 6.835 15.645 15.453 15.999 191.179 7.839 344.627 161.316 352.465 352.465.353 8.618 7.373 15.453 15.999 15.453h48.068c9.034-.001 16.329-7.474 16.005-16.504z"/></svg></a>
-
-<ul>
-  {% assign zh_posts = site.posts | where: "lang", "zh" %}
-  {% for post in zh_posts limit:20 %}
-    <li>
-      <a href="{{ post.url | relative_url }}">{{ post.date | date: "%Y-%m-%d" }}</a>
-    </li>
-  {% else %}
-    <li><em>暂无内容</em></li>
-  {% endfor %}
-</ul>
+<section class="latest-section" id="latest-zh">
+  <div class="section-heading">
+    <p class="eyebrow">LATEST</p>
+    <h2>最新精选</h2>
+    <p>每篇只保留审核后发布的内容，草稿不会出现在这里。</p>
+  </div>
+  <div class="issue-grid" data-post-list="zh"></div>
+</section>
 
 </div>
 
 <div id="lang-en" class="lang-section" markdown="1">
 
-Welcome to [Horizon](https://github.com/thysrael/Horizon), an AI-driven information aggregation system.
+<section class="home-hero">
+  <div class="hero-copy">
+    <p class="eyebrow">AI tutorials / monetization cases / productivity tips</p>
+    <h1>Xinxianxing</h1>
+    <p>Daily AI Action Cards for people who want practical things to learn, try, and save.</p>
+    <div class="hero-actions">
+      <a class="primary-action" href="#latest-en">Read latest picks</a>
+      <a class="secondary-action" href="/feed-en.xml">Subscribe RSS</a>
+    </div>
+  </div>
+  <img class="hero-visual" src="/assets/brand-sunrise.svg" alt="Xinxianxing brand visual">
+</section>
 
-## Documentation
+<section class="focus-grid" aria-label="Content categories">
+  <article>
+    <span>Tutorial</span>
+    <h2>Follow the steps</h2>
+    <p>Tools, prompts, and workflows are rewritten into practical steps you can test quickly.</p>
+  </article>
+  <article>
+    <span>Case</span>
+    <h2>See the business angle</h2>
+    <p>Monetization stories are kept grounded, with missing data and bias called out clearly.</p>
+  </article>
+  <article>
+    <span>Productivity</span>
+    <h2>Try it today</h2>
+    <p>Short, useful methods for individuals and small teams who want better output with less friction.</p>
+  </article>
+</section>
 
-- [Configuration Guide](configuration) — AI providers, information sources, filtering, and environment variable substitution
-- [Source Scrapers](scrapers) — How Horizon collects content from GitHub, Hacker News, RSS, and Reddit
-- [Scoring System](scoring) — AI-based content analysis and the 0-10 scoring scale
-
-## Daily Digest <a class="rss-icon" href="{{ '/feed-en.xml' | relative_url }}" aria-label="Subscribe English"><svg viewBox="0 0 448 512" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M128.081 415.959c0 35.369-28.672 64.041-64.041 64.041S0 451.328 0 415.959s28.672-64.041 64.041-64.041 64.04 28.673 64.04 64.041zm175.66 47.25c-8.354-154.6-132.185-278.587-286.95-286.95C7.656 175.765 0 183.105 0 192.253v48.069c0 8.415 6.49 15.472 14.887 16.018 111.832 7.284 201.473 96.702 208.772 208.772.547 8.397 7.604 14.887 16.018 14.887h48.069c9.149.001 16.489-7.655 15.995-16.79zm144.249.288C439.596 229.677 251.465 40.445 16.503 32.01 7.473 31.686 0 38.981 0 48.016v48.068c0 8.625 6.835 15.645 15.453 15.999 191.179 7.839 344.627 161.316 352.465 352.465.353 8.618 7.373 15.453 15.999 15.453h48.068c9.034-.001 16.329-7.474 16.005-16.504z"/></svg></a>
-
-<ul>
-  {% assign en_posts = site.posts | where: "lang", "en" %}
-  {% for post in en_posts limit:20 %}
-    <li>
-      <a href="{{ post.url | relative_url }}">{{ post.date | date: "%Y-%m-%d" }}</a>
-    </li>
-  {% else %}
-    <li><em>No posts yet</em></li>
-  {% endfor %}
-</ul>
+<section class="latest-section" id="latest-en">
+  <div class="section-heading">
+    <p class="eyebrow">LATEST</p>
+    <h2>Latest Picks</h2>
+    <p>Only reviewed and published issues appear here. Drafts stay private.</p>
+  </div>
+  <div class="issue-grid" data-post-list="en"></div>
+</section>
 
 </div>

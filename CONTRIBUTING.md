@@ -25,7 +25,7 @@ Please keep pull requests focused and easy to review.
 
 Horizon also welcomes **source contributions**, not just code.
 
-If you discover high-quality sources worth sharing with other users, please submit them via **[horizon1123.top](https://horizon1123.top)**.
+If you discover high-quality sources worth sharing with other users, please submit them via **[xinxianxing.com](https://xinxianxing.com)**.
 
 Good examples include:
 

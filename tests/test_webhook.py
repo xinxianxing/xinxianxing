@@ -10,10 +10,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import httpx
 from pydantic import ValidationError
 
-from src.models import ContentItem, SourceType, WebhookConfig
+from src.models import ContentItem, SignalType, SourceType, WebhookConfig
 from src.services.webhook import (
     WebhookNotifier,
     _format_markdown_for_webhook,
+    _item_page_url,
     _prepare_variables_for_body,
     _render,
     _truncate,
@@ -223,6 +224,55 @@ class TestWebhookMarkdownFormatting:
         assert "**参考链接**" in result
         assert "- [Example A](https://example.com/a)" in result
         assert "- [Example B](https://example.com/b)" in result
+
+    def test_details_references_with_unsafe_href_remain_plain_text(self):
+        summary = """## Item
+
+<details><summary>References</summary>
+<ul>
+<li><a href="javascript:alert(1)">click [me](https://evil.example)</a></li>
+</ul>
+</details>
+"""
+
+        result = _format_markdown_for_webhook(summary)
+
+        assert "javascript:alert(1)" not in result
+        assert "[click](javascript:alert(1))" not in result
+        assert "- click \\[me\\]\\(https://evil.example\\)" in result
+
+    def test_details_references_with_malformed_http_href_remain_plain_text(self):
+        summary = """## Item
+
+<details><summary>References</summary>
+<ul>
+<li><a href="https://safe.example/) [bad](javascript:alert(1))">click</a></li>
+</ul>
+</details>
+"""
+
+        result = _format_markdown_for_webhook(summary)
+
+        assert "javascript:alert(1)" not in result
+        assert "[click](https://safe.example/)" not in result
+        assert "- click" in result
+
+    def test_details_references_allow_balanced_parentheses_in_href(self):
+        summary = """## Item
+
+<details><summary>References</summary>
+<ul>
+<li><a href="https://en.wikipedia.org/wiki/Colossus_(supercomputer)">Colossus</a></li>
+</ul>
+</details>
+"""
+
+        result = _format_markdown_for_webhook(summary)
+
+        assert (
+            "- [Colossus](https://en.wikipedia.org/wiki/Colossus_(supercomputer))"
+            in result
+        )
 
     def test_prepare_variables_changes_summary_for_any_post_body(self):
         summary = "<details><summary>References</summary><ul><li>Plain item</li></ul></details>"
@@ -718,6 +768,7 @@ class TestWebhookConfigModel:
         config = WebhookConfig()
         assert config.enabled is False
         assert config.url_env is None
+        assert config.paid_feishu_url is None
         assert config.request_body is None
         assert config.headers is None
         assert config.delivery == "summary"
@@ -729,6 +780,7 @@ class TestWebhookConfigModel:
         config = WebhookConfig(
             enabled=True,
             url_env="HORIZON_WEBHOOK_URL",
+            paid_feishu_url="https://example.com/paid",
             request_body='{"msg_type":"post"}',
             headers="Authorization: Bearer xxx",
             delivery="summary_and_items",
@@ -740,6 +792,7 @@ class TestWebhookConfigModel:
         )
         assert config.enabled is True
         assert config.url_env == "HORIZON_WEBHOOK_URL"
+        assert config.paid_feishu_url == "https://example.com/paid"
         assert config.delivery == "summary_and_items"
         assert config.overview_position == "last"
         assert config.platform == "feishu"
@@ -783,7 +836,7 @@ class TestSendDailySummary:
         notifier = WebhookNotifier(config)
         summarizer = DailySummarizer()
         items = [_make_item()]
-        summary = "# Horizon Daily\nTest summary"
+        summary = "# Xinxianxing Daily\nTest summary"
 
         with patch.object(notifier, "notify", new_callable=AsyncMock) as mock_notify:
             _run_async(
@@ -799,16 +852,116 @@ class TestSendDailySummary:
             mock_notify.assert_called_once()
             vars = mock_notify.call_args[0][0]
             assert vars["message_kind"] == "summary"
-            assert vars["message_title"] == "Horizon 2026-04-24 Daily"
-            assert vars["summary"] == summary
+            assert vars["message_title"] == "Xinxianxing 2026-04-24 Picks"
+            assert "Test Item" in vars["summary"]
+            assert "AI summary" in vars["summary"]
+            assert "https://xinxianxing.com/2026/04/24/summary-en.html#item-1" in vars["summary"]
+            assert "Test summary" not in vars["summary"]
             assert vars["important_items"] == 1
             assert vars["all_items"] == 10
             assert vars["result"] == "success"
             assert vars["language"] == "en"
         del os.environ[_TEST_URL_ENV]
 
+    def test_paid_feishu_url_missing_skips_paid_delivery(self):
+        """Paid Feishu delivery is optional and skipped when the URL is blank."""
+        os.environ[_TEST_URL_ENV] = _TEST_URL
+        config = WebhookConfig(
+            enabled=True,
+            url_env=_TEST_URL_ENV,
+            delivery="summary",
+        )
+        notifier = WebhookNotifier(config)
+        summarizer = DailySummarizer()
+        items = [_make_item()]
+
+        with (
+            patch.object(notifier, "notify", new_callable=AsyncMock) as mock_notify,
+            patch.object(notifier, "notify_paid_feishu", new_callable=AsyncMock) as mock_paid,
+        ):
+            _run_async(
+                notifier.send_daily_summary(
+                    summary="# Xinxianxing Daily\nTest summary",
+                    important_items=items,
+                    all_items_count=10,
+                    date="2026-04-24",
+                    lang="en",
+                    summarizer=summarizer,
+                    paid_items=items,
+                    score_threshold=6.0,
+                )
+            )
+            mock_notify.assert_called_once()
+            mock_paid.assert_not_called()
+        del os.environ[_TEST_URL_ENV]
+
+    def test_paid_feishu_delivery_sends_concise_action_cards(self):
+        """Paid Feishu delivery sends concise cards with limited how-to points."""
+        os.environ[_TEST_URL_ENV] = _TEST_URL
+        config = WebhookConfig(
+            enabled=True,
+            url_env=_TEST_URL_ENV,
+            paid_feishu_url="https://example.com/paid",
+            delivery="summary",
+        )
+        notifier = WebhookNotifier(config)
+        summarizer = DailySummarizer()
+        first = _make_item(title="精选公开卡片")
+        first.signal_type = SignalType.TUTORIAL
+        first.intro = "一个教程技巧"
+        first.how_to = ["打开工具", "按提示词运行"]
+        first.suitable_for = ["产品经理"]
+        first.evidence = "未提供具体数据"
+        second = _make_item(title="付费额外卡片", url="https://example.com/paid-extra", score=7.0)
+        second.signal_type = SignalType.PRODUCTIVITY_TIP
+        second.intro = "一个效率技巧"
+        second.how_to = ["整理输入", "批量执行"]
+        second.suitable_for = ["运营"]
+        second.evidence = "未提供具体数据"
+
+        with (
+            patch.object(notifier, "notify", new_callable=AsyncMock) as mock_notify,
+            patch.object(notifier, "notify_paid_feishu", new_callable=AsyncMock) as mock_paid,
+        ):
+            _run_async(
+                notifier.send_daily_summary(
+                    summary="# 公开摘要",
+                    important_items=[first],
+                    all_items_count=20,
+                    date="2026-04-24",
+                    lang="zh",
+                    summarizer=summarizer,
+                    paid_items=[first, second],
+                    score_threshold=6.0,
+                )
+            )
+
+            mock_notify.assert_called_once()
+            assert mock_paid.call_count == 3
+
+            overview_body = mock_paid.call_args_list[0][0][0]
+            overview_content = overview_body["card"]["body"]["elements"][0]["content"]
+            assert "2 条达到推送标准" in overview_content
+            assert "实用度 >= 6" in overview_content
+            assert "站内完整内容" in overview_content
+
+            first_card = mock_paid.call_args_list[1][0][0]
+            first_content = first_card["card"]["body"]["elements"][0]["content"]
+            assert "精选公开卡片" in first_content
+            assert "一句话简介" in first_content
+            assert "具体怎么做" in first_content
+            assert "打开工具" in first_content
+            assert "适合谁" not in first_content
+            assert "https://xinxianxing.com/2026/04/24/summary-zh.html#item-1" in first_content
+
+            second_card = mock_paid.call_args_list[2][0][0]
+            second_content = second_card["card"]["body"]["elements"][0]["content"]
+            assert "付费额外卡片" in second_content
+            assert "批量执行" in second_content
+        del os.environ[_TEST_URL_ENV]
+
     def test_summary_delivery_zh_lang(self):
-        """Chinese lang uses '日报' in message_title."""
+        """Chinese lang uses '今日精选' in message_title."""
         os.environ[_TEST_URL_ENV] = _TEST_URL
         config = WebhookConfig(
             enabled=True,
@@ -831,7 +984,7 @@ class TestSendDailySummary:
                 )
             )
             vars = mock_notify.call_args[0][0]
-            assert vars["message_title"] == "Horizon 2026-04-24 日报"
+            assert vars["message_title"] == "信先行 2026-04-24 今日精选"
             assert vars["language"] == "zh"
         del os.environ[_TEST_URL_ENV]
 
@@ -868,7 +1021,7 @@ class TestSendDailySummary:
             # First call: overview
             overview_vars = mock_notify.call_args_list[0][0][0]
             assert overview_vars["message_kind"] == "overview"
-            assert overview_vars["message_title"] == "Horizon 2026-04-24 Overview"
+            assert overview_vars["message_title"] == "Xinxianxing 2026-04-24 Overview"
 
             # Second call: first item
             item1_vars = mock_notify.call_args_list[1][0][0]
@@ -925,7 +1078,7 @@ class TestSendDailySummary:
             assert second_vars["item_index"] == 1
             assert second_vars["item_url"] == "https://example.com/test"
             assert third_vars["message_kind"] == "overview"
-            assert third_vars["message_title"] == "Horizon 2026-04-24 Overview"
+            assert third_vars["message_title"] == "Xinxianxing 2026-04-24 Overview"
         del os.environ[_TEST_URL_ENV]
 
     def test_feishu_collapsible_layout_builds_single_card_message(self):
@@ -962,7 +1115,7 @@ class TestSendDailySummary:
         assert body["card"]["schema"] == "2.0"
 
         elements = body["card"]["body"]["elements"]
-        assert "Expand the panels below" in elements[0]["content"]
+        assert "Open the links below" in elements[0]["content"]
         assert "Item A" not in elements[0]["content"]
         panels = [
             element for element in elements if element["tag"] == "collapsible_panel"
@@ -970,9 +1123,27 @@ class TestSendDailySummary:
         assert len(panels) == 2
         assert panels[0]["expanded"] is False
         assert panels[0]["header"]["title"]["content"].startswith("1. Item A")
-        assert "Item 1/2" in panels[0]["elements"][0]["content"]
+        assert "Read full card" in panels[0]["elements"][0]["content"]
+        assert "summary-en.html#item-1" in panels[0]["elements"][0]["content"]
         assert panels[1]["header"]["title"]["content"].startswith("2. Item B")
         del os.environ[_TEST_URL_ENV]
+
+    def test_item_page_url_uses_post_permalink_with_anchor(self):
+        assert (
+            _item_page_url("2026-07-05", "zh", 2)
+            == "https://xinxianxing.com/2026/07/05/summary-zh.html#item-2"
+        )
+
+    def test_item_page_url_accepts_configured_base_url(self):
+        assert (
+            _item_page_url(
+                "2026-07-05",
+                "zh",
+                2,
+                "https://xinxianxing.com/",
+            )
+            == "https://xinxianxing.com/2026/07/05/summary-zh.html#item-2"
+        )
 
     def test_language_filter_skips_non_matching_lang(self):
         """webhook.languages=['zh'] skips 'en' language."""
@@ -1109,7 +1280,7 @@ class TestSendDailySummary:
                 )
             )
             overview_vars = mock_notify.call_args_list[0][0][0]
-            assert overview_vars["message_title"] == "Horizon 2026-04-24 总览"
+            assert overview_vars["message_title"] == "信先行 2026-04-24 总览"
         del os.environ[_TEST_URL_ENV]
 
 # ── send_failure_notification ──
@@ -1140,7 +1311,7 @@ class TestSendFailureNotification:
             assert vars["important_items"] == 0
             assert vars["all_items"] == 0
             assert vars["message_kind"] == "failure"
-            assert vars["message_title"] == "Horizon generation failed"
+            assert vars["message_title"] == "信先行 generation failed"
             assert "something went wrong" in vars["summary"]
         del os.environ[_TEST_URL_ENV]
 

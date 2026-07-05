@@ -1,12 +1,13 @@
 """Tests for TwitterScraper."""
 
 import asyncio
+import json
 from datetime import datetime, timedelta, timezone
 
 import httpx
 
-from src.models import TwitterConfig
-from src.scrapers.twitter import TwitterScraper
+from src.models import ContentItem, SourceType, TwitterConfig
+from src.scrapers.twitter import TwitterScraper, _format_apify_error, _redact_token
 
 
 def _make_config(**kwargs) -> TwitterConfig:
@@ -99,6 +100,100 @@ def test_no_users_returns_empty():
     assert result == []
 
 
+def test_redacts_apify_token_from_error_text():
+    message = (
+        "403 Forbidden for url "
+        "'https://api.apify.com/v2/acts/altimis~scweet/runs?token=secret123'"
+    )
+
+    assert "secret123" not in _redact_token(message)
+    assert "token=<redacted>" in _redact_token(message)
+
+
+def test_format_apify_error_without_response_redacts_token():
+    message = "request failed for token=secret123"
+
+    formatted = _format_apify_error(RuntimeError(message))
+
+    assert "secret123" not in formatted
+    assert "token=<redacted>" in formatted
+
+
+def test_formats_apify_http_error_with_body_and_redacted_token():
+    request = httpx.Request(
+        "POST",
+        "https://api.apify.com/v2/acts/altimis~scweet/runs?token=secret123",
+    )
+    response = httpx.Response(
+        403,
+        request=request,
+        json={
+            "error": {
+                "type": "full-permission-actor-not-approved",
+                "message": "approve permissions",
+            }
+        },
+    )
+    try:
+        response.raise_for_status()
+    except httpx.HTTPStatusError as err:
+        exc = err
+
+    formatted = _format_apify_error(exc)
+
+    assert "secret123" not in formatted
+    assert "token=<redacted>" in formatted
+    assert "full-permission-actor-not-approved" in formatted
+
+
+def test_start_run_malformed_apify_response_returns_empty(monkeypatch):
+    monkeypatch.setenv("APIFY_TOKEN", "test_token")
+
+    transport = httpx.MockTransport(
+        lambda request: httpx.Response(200, json={"unexpected": {}}, request=request)
+    )
+    client = httpx.AsyncClient(transport=transport)
+    result = asyncio.run(
+        TwitterScraper(_make_config(), client)._start_run(
+            "test_token",
+            {"source_mode": "profiles"},
+            "profiles",
+        )
+    )
+    asyncio.run(client.aclose())
+
+    assert result == (None, None)
+
+
+def test_fetch_dataset_invalid_json_returns_empty(monkeypatch):
+    monkeypatch.setenv("APIFY_TOKEN", "test_token")
+
+    transport = httpx.MockTransport(
+        lambda request: httpx.Response(200, text="not json", request=request)
+    )
+    client = httpx.AsyncClient(transport=transport)
+    result = asyncio.run(TwitterScraper(_make_config(), client)._fetch_dataset("test_token", "ds1"))
+    asyncio.run(client.aclose())
+
+    assert result == []
+
+
+def test_wait_for_run_poll_errors_then_times_out(monkeypatch):
+    from src.scrapers import twitter as twitter_module
+
+    monkeypatch.setattr(twitter_module, "_POLL_INTERVAL", 0.001)
+    monkeypatch.setattr(twitter_module, "_MAX_WAIT", 0.001)
+
+    transport = httpx.MockTransport(
+        lambda request: httpx.Response(500, text="temporary Apify error", request=request)
+    )
+    client = httpx.AsyncClient(transport=transport)
+    result = asyncio.run(TwitterScraper(_make_config(), client)._wait_for_run("test_token", "run1"))
+    asyncio.run(client.aclose())
+
+    assert result is False
+
+
 def test_missing_token_returns_empty(monkeypatch):
     monkeypatch.delenv("APIFY_TOKEN", raising=False)
     transport = httpx.MockTransport(lambda r: httpx.Response(200, json=[]))
@@ -132,6 +227,79 @@ def test_successful_fetch_returns_items(monkeypatch):
     assert len(result) == 2
     assert result[0].source_type.value == "twitter"
     assert result[0].metadata["favorite_count"] == 10
+
+
+def test_search_query_fetch_uses_apify_search_mode(monkeypatch):
+    monkeypatch.setenv("APIFY_TOKEN", "test_token")
+    since = datetime.now(timezone.utc) - timedelta(hours=1)
+    query = "(AI OR ChatGPT OR Claude OR Cursor) lang:zh -filter:replies min_faves:50"
+    tweets = [_tweet("88", screen_name="aiblogger", text="一个AI效率技巧")]
+    payloads = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if "/runs" in request.url.path and request.method == "POST":
+            payloads.append(json.loads(request.content.decode()))
+            return httpx.Response(200, json=_run_resp())
+        if "/actor-runs/" in request.url.path:
+            return httpx.Response(200, json=_status_resp())
+        if "/datasets/" in request.url.path:
+            return httpx.Response(200, json=tweets)
+        raise AssertionError(f"Unexpected: {request.url}")
+
+    transport = httpx.MockTransport(handler)
+    client = httpx.AsyncClient(transport=transport)
+    cfg = _make_config(
+        users=[],
+        search_queries=[query],
+        search_sort="Top",
+        search_limit=20,
+    )
+    result = asyncio.run(TwitterScraper(cfg, client).fetch(since))
+    asyncio.run(client.aclose())
+
+    assert len(result) == 1
+    assert payloads[0]["source_mode"] == "search"
+    assert payloads[0]["search_query"] == query
+    assert payloads[0]["search_sort"] == "Top"
+    assert payloads[0]["max_items"] == 100
+    assert payloads[0]["since"] == since.date().isoformat()
+    assert result[0].metadata["search_query"] == query
+
+
+def test_profiles_and_search_queries_are_deduplicated(monkeypatch):
+    monkeypatch.setenv("APIFY_TOKEN", "test_token")
+    since = datetime.now(timezone.utc) - timedelta(hours=1)
+    payloads = []
+    run_counter = {"n": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if "/runs" in request.url.path and request.method == "POST":
+            run_counter["n"] += 1
+            payloads.append(json.loads(request.content.decode()))
+            return httpx.Response(
+                200,
+                json=_run_resp(f"run{run_counter['n']}", f"ds{run_counter['n']}"),
+            )
+        if "/actor-runs/" in request.url.path:
+            return httpx.Response(200, json=_status_resp())
+        if "/datasets/" in request.url.path:
+            return httpx.Response(200, json=[_tweet("42", screen_name="karpathy")])
+        raise AssertionError(f"Unexpected: {request.url}")
+
+    transport = httpx.MockTransport(handler)
+    client = httpx.AsyncClient(transport=transport)
+    cfg = _make_config(
+        users=["karpathy"],
+        search_queries=["AI lang:zh min_faves:50"],
+    )
+    result = asyncio.run(TwitterScraper(cfg, client).fetch(since))
+    asyncio.run(client.aclose())
+
+    assert len(payloads) == 2
+    assert payloads[0]["source_mode"] == "profiles"
+    assert payloads[0]["profile_urls"] == ["@karpathy"]
+    assert payloads[1]["source_mode"] == "search"
+    assert len(result) == 1
 
 
 def test_metadata_keys_aligned_for_analyzer(monkeypatch):
@@ -330,9 +498,6 @@ def test_fetch_replies_appends_top_comments(monkeypatch):
     )
     scraper = TwitterScraper(cfg, client)
 
-    from src.models import ContentItem, SourceType
-    from datetime import datetime, timezone
-
     item = ContentItem(
         id="twitter:tweet:42",
         source_type=SourceType.TWITTER,
@@ -356,9 +521,78 @@ def test_fetch_replies_appends_top_comments(monkeypatch):
     assert not any("dave" in l for l in reply_lines)
 
 
-def test_append_discussion_content_adds_marker():
-    from src.models import ContentItem, SourceType
+def test_fetch_replies_missing_token_returns_empty(monkeypatch):
+    monkeypatch.delenv("APIFY_TOKEN", raising=False)
+    transport = httpx.MockTransport(lambda r: httpx.Response(200, json=[]))
+    client = httpx.AsyncClient(transport=transport)
+    cfg = _make_config(fetch_reply_text=True)
+    scraper = TwitterScraper(cfg, client)
+    item = ContentItem(
+        id="twitter:tweet:42",
+        source_type=SourceType.TWITTER,
+        title="@x: test",
+        url="https://twitter.com/x/status/42",
+        content="body",
+        author="x",
+        published_at=datetime.now(timezone.utc),
+        metadata={"tweet_id": "42", "conversation_id": "42"},
+    )
 
+    result = asyncio.run(scraper.fetch_replies_for_item(item))
+    asyncio.run(client.aclose())
+
+    assert result == []
+
+
+def test_fetch_replies_zero_limit_returns_empty(monkeypatch):
+    monkeypatch.setenv("APIFY_TOKEN", "test_token")
+    transport = httpx.MockTransport(lambda r: httpx.Response(200, json=[]))
+    client = httpx.AsyncClient(transport=transport)
+    cfg = _make_config(fetch_reply_text=True, max_replies_per_tweet=0)
+    scraper = TwitterScraper(cfg, client)
+    item = ContentItem(
+        id="twitter:tweet:42",
+        source_type=SourceType.TWITTER,
+        title="@x: test",
+        url="https://twitter.com/x/status/42",
+        content="body",
+        author="x",
+        published_at=datetime.now(timezone.utc),
+        metadata={"tweet_id": "42", "conversation_id": "42"},
+    )
+
+    result = asyncio.run(scraper.fetch_replies_for_item(item))
+    asyncio.run(client.aclose())
+
+    assert result == []
+
+
+def test_fetch_replies_start_run_error_returns_empty(monkeypatch):
+    monkeypatch.setenv("APIFY_TOKEN", "test_token")
+    transport = httpx.MockTransport(
+        lambda request: httpx.Response(403, text="quota exceeded", request=request)
+    )
+    client = httpx.AsyncClient(transport=transport)
+    cfg = _make_config(fetch_reply_text=True)
+    scraper = TwitterScraper(cfg, client)
+    item = ContentItem(
+        id="twitter:tweet:42",
+        source_type=SourceType.TWITTER,
+        title="@x: test",
+        url="https://twitter.com/x/status/42",
+        content="body",
+        author="x",
+        published_at=datetime.now(timezone.utc),
+        metadata={"tweet_id": "42", "conversation_id": "42"},
+    )
+
+    result = asyncio.run(scraper.fetch_replies_for_item(item))
+    asyncio.run(client.aclose())
+
+    assert result == []
+
+
+def test_append_discussion_content_adds_marker():
     item = ContentItem(
         id="twitter:tweet:1",
         source_type=SourceType.TWITTER,
@@ -376,8 +610,6 @@ def test_append_discussion_content_adds_marker():
 
 
 def test_append_discussion_content_empty_lines_no_change():
-    from src.models import ContentItem, SourceType
-
     item = ContentItem(
         id="twitter:tweet:2",
         source_type=SourceType.TWITTER,
@@ -393,14 +625,33 @@ def test_append_discussion_content_empty_lines_no_change():
     assert item.content == "original"
 
 
+def test_append_discussion_content_existing_marker_deduplicates():
+    line = "[@alice | ❤️ 5 | 💬 1] reply text"
+    item = ContentItem(
+        id="twitter:tweet:3",
+        source_type=SourceType.TWITTER,
+        title="test",
+        url="https://twitter.com/x/status/3",
+        content=f"original\n\n--- Top Comments ---\n{line}",
+        author="x",
+        published_at=datetime.now(timezone.utc),
+        metadata={},
+    )
+
+    assert TwitterScraper.append_discussion_content(item, [line]) is False
+    assert TwitterScraper.append_discussion_content(
+        item,
+        ["[@bob | ❤️ 8 | 💬 2] another reply"],
+    ) is True
+    assert "bob" in item.content
+
+
 def test_fetch_replies_no_conversation_id_returns_empty(monkeypatch):
     monkeypatch.setenv("APIFY_TOKEN", "test_token")
     transport = httpx.MockTransport(lambda r: httpx.Response(200, json=[]))
     client = httpx.AsyncClient(transport=transport)
     cfg = _make_config(fetch_reply_text=True)
     scraper = TwitterScraper(cfg, client)
-
-    from src.models import ContentItem, SourceType
 
     item = ContentItem(
         id="twitter:tweet:x",
@@ -417,4 +668,27 @@ def test_fetch_replies_no_conversation_id_returns_empty(monkeypatch):
     assert result == []
 
 
+def test_parse_item_rejects_malformed_rows():
+    client = httpx.AsyncClient(transport=httpx.MockTransport(lambda r: httpx.Response(200)))
+    scraper = TwitterScraper(_make_config(), client)
+    since = datetime.now(timezone.utc) - timedelta(hours=1)
 
+    assert scraper._parse_item({}, since) is None
+    assert scraper._parse_item({"created_at": datetime.now(timezone.utc).isoformat()}, since) is None
+    assert scraper._parse_item(
+        {
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "id": "tweet-99",
+            "text": "",
+        },
+        since,
+    ) is None
+    assert scraper._parse_item(
+        {
+            "created_at": "not-a-date",
+            "id": "tweet-99",
+            "text": "hello",
+        },
+        since,
+    ) is None
+    asyncio.run(client.aclose())

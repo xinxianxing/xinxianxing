@@ -35,20 +35,31 @@ ENV/
 
 # Environment variables
 .env
+.env.*
+!.env.example
 
 # Data files (keep structure, ignore content)
+data/config.json
 data/seen.json
 data/summaries/*.md
 data/subscribers.json
 data/mcp.secrets.json
 data/mcp-secrets.json
 data/mcp-runs/
+data/x_cookies_*.json
+data/feedback.sqlite3
+data/feedback.sqlite3-*
 
 docs/_posts/*.md
 
 # Logs
 logs/*.log
 *.log
+.coverage
+htmlcov/
+.playwright-cli/
+.wrangler/
+output/
 
 # macOS
 .DS_Store

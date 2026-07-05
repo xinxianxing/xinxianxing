@@ -1,16 +1,17 @@
-"""Webhook notification service for Horizon."""
+"""Webhook notification service for 信先行."""
 
-import html
 import json
 import logging
 import os
 import re
+from pathlib import Path
 from urllib.parse import urlsplit, urlunsplit
 from datetime import datetime, timezone
 from typing import Any, List, Optional, Union, cast
 from urllib.parse import urlparse
 import httpx
 
+from ..ai.markdown_utils import clean_app_summary_markdown
 from ..models import ContentItem, WebhookConfig
 from ..ai.summarizer import DailySummarizer
 
@@ -19,22 +20,10 @@ logger = logging.getLogger(__name__)
 
 # Pattern: #{key} or #{key?param1=val1&param2=val2}
 _PLACEHOLDER_RE = re.compile(r"#\{(\w+)(\?\w+=[^}]+)?\}")
-_DETAILS_RE = re.compile(
-    r"<details>\s*<summary>(.*?)</summary>\s*(.*?)\s*</details>",
-    re.IGNORECASE | re.DOTALL,
-)
-_LI_LINK_RE = re.compile(
-    r"<li>\s*<a\s+[^>]*href=[\"']([^\"']+)[\"'][^>]*>(.*?)</a>\s*</li>",
-    re.IGNORECASE | re.DOTALL,
-)
-_LI_RE = re.compile(r"<li>\s*(.*?)\s*</li>", re.IGNORECASE | re.DOTALL)
-_ANCHOR_ID_RE = re.compile(
-    r"<a\s+[^>]*id=[\"'][^\"']+[\"'][^>]*>\s*</a>", re.IGNORECASE
-)
-_HTML_TAG_RE = re.compile(r"<[^>]+>")
 _SENSITIVE_HEADER_RE = re.compile(
     r"(authorization|token|secret|signature|key|password)", re.IGNORECASE
 )
+_DEFAULT_SITE_BASE_URL = "https://xinxianxing.com"
 
 
 def _truncate(value: str, limit: int, split: str) -> str:
@@ -124,48 +113,9 @@ def _render(
     return template
 
 
-def _strip_html_tags(value: str) -> str:
-    """Remove simple HTML tags and decode HTML entities."""
-    return html.unescape(_HTML_TAG_RE.sub("", value)).strip()
-
-
-def _convert_details_to_markdown(value: str) -> str:
-    """Convert HTML details blocks into plain Markdown sections.
-
-    Feishu card Markdown does not render HTML disclosure widgets, so references
-    are flattened to a heading plus Markdown links before webhook delivery.
-    """
-
-    def _replace(match: re.Match) -> str:
-        title = _strip_html_tags(match.group(1)) or "References"
-        body = match.group(2)
-        items: list[str] = []
-
-        for href, label in _LI_LINK_RE.findall(body):
-            clean_label = _strip_html_tags(label)
-            clean_href = html.unescape(href).strip()
-            if clean_label and clean_href:
-                items.append(f"- [{clean_label}]({clean_href})")
-
-        if not items:
-            for item in _LI_RE.findall(body):
-                clean_item = _strip_html_tags(item)
-                if clean_item:
-                    items.append(f"- {clean_item}")
-
-        if not items:
-            fallback = _strip_html_tags(body)
-            return f"**{title}**\n\n{fallback}" if fallback else f"**{title}**"
-
-        return f"**{title}**\n\n" + "\n".join(items)
-
-    return _DETAILS_RE.sub(_replace, value)
-
-
 def _format_markdown_for_webhook(value: str) -> str:
     """Flatten HTML constructs that chat/webhook Markdown often cannot render."""
-    value = _ANCHOR_ID_RE.sub("", value)
-    return _convert_details_to_markdown(value)
+    return clean_app_summary_markdown(value)
 
 
 def _prepare_variables_for_body(
@@ -221,6 +171,99 @@ def _collapsible_panel(title: str, content: str) -> dict[str, Any]:
     }
 
 
+def _clean_markdown_text(value: object, fallback: str = "") -> str:
+    """Normalize small pieces of text used in webhook card snippets."""
+    text = re.sub(r"\s+", " ", str(value or fallback)).strip()
+    return text
+
+
+def _safe_markdown_label(value: object, fallback: str = "") -> str:
+    """Avoid breaking Markdown links/headings with raw bracket characters."""
+    return _clean_markdown_text(value, fallback).replace("[", "(").replace("]", ")")
+
+
+def _clip_text(value: object, limit: int) -> str:
+    """Clip one-line webhook text without changing the underlying Action Card."""
+    text = _clean_markdown_text(value)
+    if len(text) <= limit:
+        return text
+    return text[: max(limit - 3, 0)].rstrip() + "..."
+
+
+def _site_config_value(key: str) -> str:
+    """Read a simple scalar key from docs/_config.yml without a YAML dependency."""
+    config_path = Path("docs/_config.yml")
+    if not config_path.exists():
+        return ""
+    pattern = re.compile(rf"^\s*{re.escape(key)}\s*:\s*(.+?)\s*$")
+    try:
+        lines = config_path.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return ""
+    for line in lines:
+        match = pattern.match(line)
+        if not match:
+            continue
+        value = match.group(1).split("#", 1)[0].strip()
+        return value.strip("\"'")
+    return ""
+
+
+def _normalize_site_base_url(value: str | None) -> str:
+    """Normalize a configured site base URL for joining with article paths."""
+    base_url = (value or "").strip().rstrip("/")
+    if not base_url:
+        return ""
+    parsed = urlparse(base_url)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        return ""
+    return base_url
+
+
+def _data_config_site_base_url() -> str:
+    """Read site.base_url from data/config.json without requiring Config wiring."""
+    config_path = Path("data/config.json")
+    if not config_path.exists():
+        return ""
+    try:
+        raw = json.loads(config_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return ""
+    site = raw.get("site") if isinstance(raw, dict) else None
+    if not isinstance(site, dict):
+        return ""
+    return _normalize_site_base_url(site.get("base_url"))
+
+
+def _site_base_url() -> str:
+    """Return the configured website base URL for item deep links."""
+    data_config_base_url = _data_config_site_base_url()
+    if data_config_base_url:
+        return data_config_base_url
+
+    site_url = _site_config_value("url").rstrip("/")
+    baseurl = _site_config_value("baseurl").strip("/")
+    if not site_url:
+        return _DEFAULT_SITE_BASE_URL
+    return f"{site_url}/{baseurl}" if baseurl else site_url
+
+
+def _item_page_url(
+    date: str,
+    lang: str,
+    index: int,
+    site_base_url: str | None = None,
+) -> str:
+    """Build the post-style URL for one Action Card anchor."""
+    try:
+        year, month, day = date.split("-", 2)
+        path = f"{year}/{month}/{day}/summary-{lang}.html"
+    except ValueError:
+        path = f"{date}-summary-{lang}.html"
+    base_url = _normalize_site_base_url(site_base_url) or _site_base_url()
+    return f"{base_url.rstrip('/')}/{path}#item-{index}"
+
+
 def _extract_headers(headers_str: Optional[str]) -> dict:
     """Parse custom headers from a multi-line "Key: Value" string.
 
@@ -270,8 +313,14 @@ def redact_headers(headers: dict[str, str]) -> dict[str, str]:
 class WebhookNotifier:
     """Sends webhook notifications after pipeline completion or failure."""
 
-    def __init__(self, config: WebhookConfig, console=None):
+    def __init__(
+        self,
+        config: WebhookConfig,
+        console=None,
+        site_base_url: str | None = None,
+    ):
         self.config = config
+        self.site_base_url = _normalize_site_base_url(site_base_url) or _site_base_url()
         if console is None:
             try:
                 from rich.console import Console
@@ -287,38 +336,45 @@ class WebhookNotifier:
         else:
             self.console = console
         self.url = None
+        self.paid_feishu_url = None
         self._validate_config()  # sets self.url or raises ValueError
+        self._validate_paid_feishu_url()
 
-    def _validate_url(self, url: str) -> str:
+    def _item_page_url(self, date: str, lang: str, index: int) -> str:
+        """Build this notifier's configured public page URL for one card."""
+        return _item_page_url(date, lang, index, self.site_base_url)
+
+    def _validate_url(self, url: str, source_label: str | None = None) -> str:
         """Validate webhook URL has a valid scheme (http/https) and hostname.
         Raises:
             ValueError: If the URL is empty, has wrong scheme, no hostname,
                         or is structurally invalid
         """
+        label = source_label or f"env var '{self.config.url_env}'"
         url = url.strip()
         # Remove shell escape artifacts: \? \= \& \% before query chars
         url = re.sub(r"\\([?=&%])", r"\1", url)
         if not url:
             raise ValueError(
-                f"Webhook URL is empty (env var '{self.config.url_env}' is set but empty)"
+                f"Webhook URL is empty ({label} is set but empty)"
             )
         parsed = urlparse(url)
         if parsed.scheme not in ("http", "https"):
             raise ValueError(
                 f"Webhook URL must use http or https scheme, got '{parsed.scheme or 'none'}' "
-                f"(env var '{self.config.url_env}')"
+                f"({label})"
             )
         if not parsed.hostname:
             raise ValueError(
                 f"Webhook URL has no hostname: '{url}' "
-                f"(env var '{self.config.url_env}')"
+                f"({label})"
             )
         try:
             httpx.URL(url)
         except httpx.InvalidURL as e:
             raise ValueError(
                 f"Webhook URL is structurally invalid: '{url}' — {e} "
-                f"(env var '{self.config.url_env}')"
+                f"({label})"
             ) from e
         return url
 
@@ -352,6 +408,28 @@ class WebhookNotifier:
 
         # env var exists — validate the URL value (strip + scheme + hostname + httpx check)
         self.url = self._validate_url(raw_url)
+
+    def _validate_paid_feishu_url(self) -> None:
+        """Validate optional paid-user Feishu webhook URL.
+
+        Missing/blank paid URLs intentionally skip the paid channel without
+        changing the public webhook behavior.
+        """
+        raw_url = (getattr(self.config, "paid_feishu_url", None) or "").strip()
+        if not raw_url:
+            return
+
+        try:
+            self.paid_feishu_url = self._validate_url(
+                raw_url,
+                source_label="webhook.paid_feishu_url",
+            )
+        except ValueError as exc:
+            logger.warning("Invalid paid_feishu_url configured; skipping paid webhook: %s", exc)
+            self.console.print(
+                "[yellow]Paid Feishu webhook URL is invalid; "
+                f"skipping paid notifications: {exc}[/yellow]"
+            )
 
     def _render_request_components(
         self, variables: dict
@@ -400,26 +478,140 @@ class WebhookNotifier:
         if lang == "zh":
             if item_count == 0:
                 return (
-                    f"# Horizon 每日速递 - {date}\n\n"
-                    f"> 已分析 {all_items_count} 条内容，暂无达到重要性阈值的资讯。"
+                    f"# 信先行实用卡片 - {date}\n\n"
+                    f"> 已分析 {all_items_count} 条内容，暂无达到实用度阈值的条目。"
                 )
             return (
-                f"# Horizon 每日速递 - {date}\n\n"
-                f"> 从 {all_items_count} 条内容中筛选出 {item_count} 条重要资讯。\n\n"
-                "点击下方新闻面板即可在飞书内展开阅读全文。"
+                f"# 信先行实用卡片 - {date}\n\n"
+                f"> 从 {all_items_count} 条内容中筛选出 {item_count} 条教程/案例/技巧。\n\n"
+                "点击下方链接即可到站内查看完整 Action Card。"
             )
 
         if item_count == 0:
             return (
-                f"# Horizon Daily - {date}\n\n"
-                f"> Analyzed {all_items_count} items, but none met the importance threshold."
+                f"# Xinxianxing Practical Cards - {date}\n\n"
+                f"> Analyzed {all_items_count} items, but none met the utility threshold."
             )
 
         return (
-            f"# Horizon Daily - {date}\n\n"
-            f"> Selected {item_count} important items from {all_items_count} fetched items.\n\n"
-            "Expand the panels below to read the full briefing inside Feishu/Lark."
+            f"# Xinxianxing Practical Cards - {date}\n\n"
+            f"> Selected {item_count} tutorial/case/tip cards from {all_items_count} fetched items.\n\n"
+            "Open the links below to read the full Action Cards on the site."
         )
+
+    def _item_intro(self, item: ContentItem) -> str:
+        """Return the shortest useful intro for a webhook item snippet."""
+        return _clean_markdown_text(
+            item.intro
+            or item.ai_summary
+            or item.what_happened
+            or item.metadata.get("summary")
+            or item.content
+            or "暂无一句话简介。"
+        )
+
+    def _item_title(self, item: ContentItem, lang: str) -> str:
+        """Return localized item title for webhook snippets."""
+        return _safe_markdown_label(item.metadata.get(f"title_{lang}") or item.title, "Untitled")
+
+    def _item_how_to_points(self, item: ContentItem, max_points: int = 2) -> list[str]:
+        """Return the first few actionable points for the paid Feishu snippet."""
+        points = item.how_to or item.suggested_actions or item.opportunities or []
+        return [_clean_markdown_text(point) for point in points[:max_points] if _clean_markdown_text(point)]
+
+    def _build_public_digest_summary(
+        self,
+        important_items: List[ContentItem],
+        all_items_count: int,
+        date: str,
+        lang: str,
+    ) -> str:
+        """Build compact public webhook content: title, intro, and site link."""
+        if lang == "zh":
+            lines: list[str] = []
+            if not important_items:
+                return "今日暂无达到推送标准的卡片。"
+            link_label = "查看完整内容"
+        else:
+            lines = []
+            if not important_items:
+                return "No cards met the delivery threshold today."
+            link_label = "Read full card"
+
+        for index, item in enumerate(important_items, start=1):
+            title = self._item_title(item, lang)
+            intro = _clip_text(self._item_intro(item), 120)
+            link = self._item_page_url(date, lang, index)
+            if lines:
+                lines.append("")
+            lines.extend(
+                [
+                    f"**{index}. {title}**",
+                    f"{intro}",
+                    f"[{link_label}]({link})",
+                ]
+            )
+        return "\n".join(lines)
+
+    def _build_public_item_summary(
+        self,
+        item: ContentItem,
+        date: str,
+        lang: str,
+        index: int,
+        total: int,
+    ) -> str:
+        """Build a compact one-item public webhook message."""
+        title = self._item_title(item, lang)
+        intro = _clip_text(self._item_intro(item), 140)
+        link = self._item_page_url(date, lang, index)
+        if lang == "zh":
+            return (
+                f"**{title}**\n\n"
+                f"{intro}\n\n"
+                f"[查看完整内容]({link})"
+            )
+        return (
+            f"**{title}**\n\n"
+            f"{intro}\n\n"
+            f"[Read full card]({link})"
+        )
+
+    def _build_paid_item_summary(
+        self,
+        item: ContentItem,
+        date: str,
+        lang: str,
+        index: int,
+        total: int,
+    ) -> str:
+        """Build a compact paid-channel item with up to two how-to bullets."""
+        title = self._item_title(item, lang)
+        intro = _clip_text(self._item_intro(item), 140)
+        link = self._item_page_url(date, lang, index)
+        points = self._item_how_to_points(item, max_points=2)
+        if lang == "zh":
+            lines = [
+                f"**{title}**",
+                "",
+                f"**一句话简介**: {intro}",
+            ]
+            if points:
+                lines.extend(["", "**具体怎么做**:"])
+                lines.extend(f"- {_clip_text(point, 90)}" for point in points)
+            lines.extend(["", f"[查看完整内容]({link})"])
+            return "\n".join(lines)
+
+        lines = [
+            f"**{title}**",
+            "",
+            f"**One-Line Intro**: {intro}",
+        ]
+        if points:
+            lines.extend(["", "**How To Do It**:"])
+            lines.extend(f"- {_clip_text(point, 90)}" for point in points)
+        lines.extend(["", f"[Read full card]({link})"])
+        return "\n".join(lines)
 
     def _build_feishu_collapsible_body(
         self,
@@ -442,9 +634,10 @@ class WebhookNotifier:
             title = str(item.metadata.get(f"title_{lang}") or item.title)
             score = item.ai_score or "?"
             panel_title = f"{item_index}. {title} ⭐️ {score}/10"
-            item_content = summarizer.generate_webhook_item(
+            item_content = self._build_public_item_summary(
                 item,
-                language=lang,
+                date=date,
+                lang=lang,
                 index=item_index,
                 total=len(important_items),
             )
@@ -467,9 +660,9 @@ class WebhookNotifier:
                     "title": {
                         "tag": "plain_text",
                         "content": (
-                            f"Horizon {date} 折叠日报"
+                            f"信先行 {date} 折叠日报"
                             if lang == "zh"
-                            else f"Horizon {date} Collapsible Daily"
+                            else f"Xinxianxing {date} Collapsible Daily"
                         ),
                     },
                     "template": "blue",
@@ -479,6 +672,111 @@ class WebhookNotifier:
                 },
             },
         }
+
+    def _build_paid_feishu_card(
+        self,
+        title: str,
+        content: str,
+        *,
+        template: str = "green",
+    ) -> dict[str, Any]:
+        """Build a Feishu interactive card for paid-user delivery."""
+        return {
+            "msg_type": "interactive",
+            "card": {
+                "schema": "2.0",
+                "config": {
+                    "wide_screen_mode": True,
+                    "update_multi": True,
+                },
+                "header": {
+                    "title": {
+                        "tag": "plain_text",
+                        "content": title,
+                    },
+                    "template": template,
+                },
+                "body": {
+                    "elements": [
+                        _markdown(_format_markdown_for_webhook(content)),
+                    ],
+                },
+            },
+        }
+
+    def build_paid_feishu_messages(
+        self,
+        paid_items: List[ContentItem],
+        all_items_count: int,
+        date: str,
+        lang: str,
+        summarizer: DailySummarizer,
+        score_threshold: float | None = None,
+    ) -> List[dict[str, Any]]:
+        """Build concise Action Card messages for the optional paid Feishu channel."""
+        if not self.paid_feishu_url:
+            return []
+
+        sorted_items = sorted(
+            paid_items,
+            key=lambda item: item.ai_score or 0,
+            reverse=True,
+        )
+        threshold_text = (
+            f"实用度 >= {score_threshold:g}"
+            if lang == "zh" and score_threshold is not None
+            else f"score >= {score_threshold:g}"
+            if score_threshold is not None
+            else "已达标"
+        )
+
+        if lang == "zh":
+            overview = (
+                f"# 信先行付费精选 Action Cards - {date}\n\n"
+                f"> 今日共抓取 {all_items_count} 条内容，"
+                f"{len(sorted_items)} 条达到推送标准（{threshold_text}）。\n\n"
+                "下面按实用度评分从高到低发送精简卡片；点击链接可查看站内完整内容。"
+            )
+            overview_title = f"信先行付费精选卡片 - {date}"
+        else:
+            overview = (
+                f"# Xinxianxing Paid Selected Action Cards - {date}\n\n"
+                f"> Fetched {all_items_count} items. "
+                f"{len(sorted_items)} met the paid delivery threshold ({threshold_text}).\n\n"
+                "Concise cards are sent in score order. Open each link to read the full site version."
+            )
+            overview_title = f"Xinxianxing Paid Cards - {date}"
+
+        messages = [
+            self._build_paid_feishu_card(
+                overview_title,
+                overview,
+                template="green",
+            )
+        ]
+
+        for item_index, item in enumerate(sorted_items, start=1):
+            title = str(item.metadata.get(f"title_{lang}") or item.title)
+            if lang == "zh":
+                message_title = f"{item_index}/{len(sorted_items)} {title}"
+            else:
+                message_title = f"{item_index}/{len(sorted_items)} {title}"
+            item_content = self._build_paid_item_summary(
+                item,
+                date=date,
+                lang=lang,
+                index=item_index,
+                total=len(sorted_items),
+            )
+            messages.append(
+                self._build_paid_feishu_card(
+                    message_title[:80],
+                    item_content,
+                    template="blue",
+                )
+            )
+
+        return messages
 
     def build_preview(self, variables: dict) -> dict[str, Any]:
         """Build the fully rendered request for dry-run preview."""
@@ -517,9 +815,9 @@ class WebhookNotifier:
                 {
                     **base_vars,
                     "message_title": (
-                        f"Horizon {date} 折叠日报"
+                        f"信先行 {date} 折叠日报"
                         if lang == "zh"
-                        else f"Horizon {date} Collapsible Daily"
+                        else f"Xinxianxing {date} Collapsible Daily"
                     ),
                     "message_kind": "collapsible",
                     "summary": self._build_feishu_collapsible_overview(
@@ -550,18 +848,19 @@ class WebhookNotifier:
             overview_message = {
                 **base_vars,
                 "message_title": (
-                    f"Horizon {date} 总览"
+                    f"信先行 {date} 总览"
                     if lang == "zh"
-                    else f"Horizon {date} Overview"
+                    else f"Xinxianxing {date} Overview"
                 ),
                 "message_kind": "overview",
                 "summary": overview,
             }
             for item_index, item in enumerate(important_items, start=1):
                 title = str(item.metadata.get(f"title_{lang}") or item.title)
-                item_summary = summarizer.generate_webhook_item(
+                item_summary = self._build_public_item_summary(
                     item,
-                    language=lang,
+                    date=date,
+                    lang=lang,
                     index=item_index,
                     total=len(important_items),
                 )
@@ -588,10 +887,17 @@ class WebhookNotifier:
             {
                 **base_vars,
                 "message_title": (
-                    f"Horizon {date} 日报" if lang == "zh" else f"Horizon {date} Daily"
+                    f"信先行 {date} 今日精选"
+                    if lang == "zh"
+                    else f"Xinxianxing {date} Picks"
                 ),
                 "message_kind": "summary",
-                "summary": summary,
+                "summary": self._build_public_digest_summary(
+                    important_items=important_items,
+                    all_items_count=all_items_count,
+                    date=date,
+                    lang=lang,
+                ),
             }
         ]
 
@@ -664,6 +970,46 @@ class WebhookNotifier:
             )
             logger.error("Webhook unexpected error: URL=%s, type=%s, error=%s", safe_url, type(e).__name__, e)
 
+    async def notify_paid_feishu(self, body: dict[str, Any]) -> None:
+        """Send one paid-channel Feishu message."""
+        if not self.config.enabled or not self.paid_feishu_url:
+            return
+
+        request_url = self.paid_feishu_url
+        safe_url = redact_url(request_url)
+        body_content = json.dumps(body, ensure_ascii=False)
+        headers = {"Content-Type": "application/json"}
+
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.post(
+                    request_url,
+                    content=body_content.encode("utf-8"),
+                    headers=headers,
+                )
+
+            self._handle_response_status(response, safe_url)
+
+        except httpx.InvalidURL as e:
+            self.console.print(f"[red]Paid Feishu webhook URL is invalid: {e}[/red]")
+            logger.error("Paid Feishu webhook URL invalid: %s", e)
+        except httpx.ConnectError as e:
+            self.console.print(f"[red]Paid Feishu webhook connection failed: {e}[/red]")
+            logger.error("Paid Feishu webhook connection failed: URL=%s, error=%s", safe_url, e)
+        except httpx.TimeoutException as e:
+            self.console.print(f"[red]Paid Feishu webhook request timed out: {e}[/red]")
+            logger.error("Paid Feishu webhook timeout: URL=%s, error=%s", safe_url, e)
+        except Exception as e:
+            self.console.print(
+                f"[red]Paid Feishu webhook failed unexpectedly: {type(e).__name__}: {e}[/red]"
+            )
+            logger.error(
+                "Paid Feishu webhook unexpected error: URL=%s, type=%s, error=%s",
+                safe_url,
+                type(e).__name__,
+                e,
+            )
+
     def _check_body_error_code(self, body: str) -> Optional[str]:
         """Check if a 2xx response body contains a platform-specific error code.
 
@@ -680,22 +1026,25 @@ class WebhookNotifier:
         except (json.JSONDecodeError, ValueError):
             return None
 
-        # Feishu/Lark: "code" or "StatusCode" field
-        feishu_code = data.get("code") or data.get("StatusCode")
-        if feishu_code is not None and feishu_code != 0:
-            msg = data.get("msg") or data.get("StatusMessage") or ""
-            return f"Feishu/Lark error (code={feishu_code}): {msg}"
+        platform = (self.config.platform or "").lower()
+        check_all = platform in ("", "generic")
 
-        # DingTalk: "errcode" field
-        dingtalk_code = data.get("errcode")
-        if dingtalk_code is not None and dingtalk_code != 0:
-            msg = data.get("errmsg") or ""
-            return f"DingTalk error (errcode={dingtalk_code}): {msg}"
+        if platform in ("feishu", "lark") or check_all:
+            code = data.get("code") or data.get("StatusCode")
+            if code is not None and code != 0:
+                msg = data.get("msg") or data.get("StatusMessage") or ""
+                return f"Feishu/Lark error (code={code}): {msg}"
 
-        # Slack/Discord: "ok" field
-        if data.get("ok") is False:
-            error = data.get("error") or ""
-            return f"Slack/Discord error: {error}"
+        if platform == "dingtalk" or check_all:
+            errcode = data.get("errcode")
+            if errcode is not None and errcode != 0:
+                msg = data.get("errmsg") or ""
+                return f"DingTalk error (errcode={errcode}): {msg}"
+
+        if platform in ("slack", "discord") or check_all:
+            if data.get("ok") is False:
+                error = data.get("error") or ""
+                return f"Slack/Discord error: {error}"
 
         return None
 
@@ -766,11 +1115,13 @@ class WebhookNotifier:
         date: str,
         lang: str,
         summarizer: DailySummarizer,
+        paid_items: Optional[List[ContentItem]] = None,
+        score_threshold: float | None = None,
     ) -> None:
         """Send daily summary webhook notification.
 
         Handles language filtering, delivery mode (summary vs summary_and_items),
-        and variable construction internally.
+        optional paid Feishu delivery, and variable construction internally.
 
         Args:
             summary: Full markdown summary text
@@ -779,6 +1130,8 @@ class WebhookNotifier:
             date: Date string (YYYY-MM-DD)
             lang: Language code ("en" or "zh")
             summarizer: DailySummarizer instance for generating webhook overviews
+            paid_items: All score-qualified items for paid-user full-card delivery
+            score_threshold: Score threshold used to select paid_items
         """
         messages = self.build_daily_summary_messages(
             summary=summary,
@@ -798,6 +1151,19 @@ class WebhookNotifier:
         self.console.print(f"🔔 Sending {lang.upper()} webhook notification...")
         for message in messages:
             await self.notify(message)
+
+        paid_messages = self.build_paid_feishu_messages(
+            paid_items=paid_items if paid_items is not None else important_items,
+            all_items_count=all_items_count,
+            date=date,
+            lang=lang,
+            summarizer=summarizer,
+            score_threshold=score_threshold,
+        )
+        if paid_messages:
+            self.console.print(f"🔐 Sending {lang.upper()} paid Feishu webhook notification...")
+            for message in paid_messages:
+                await self.notify_paid_feishu(message)
 
     async def send_failure(
         self,
@@ -819,7 +1185,7 @@ class WebhookNotifier:
                 "all_items": 0,
                 "result": "failed",
                 "timestamp": str(int(datetime.now(timezone.utc).timestamp())),
-                "message_title": "Horizon generation failed",
+                "message_title": "信先行 generation failed",
                 "message_kind": "failure",
                 "summary": f"generation failed: {error_message}",
             }

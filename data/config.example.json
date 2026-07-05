@@ -17,7 +17,7 @@
     "imap_server": "imap.qq.com",
     "imap_port": 993,
     "email_address": "xxx@qq.com",
-    "sender_name": "Horizon Daily",
+    "sender_name": "信先行",
     "subscribe_keyword": "SUBSCRIBE",
     "unsubscribe_keyword": "UNSUBSCRIBE"
   },
@@ -78,12 +78,20 @@
     },
     "twitter": {
       "enabled": false,
+      "mode": "apify",
       "users": ["karpathy", "ylecun"],
+      "search_queries": [
+        "(AI OR ChatGPT OR Claude OR Cursor OR DeepSeek OR 大模型 OR 提示词 OR 自动化 OR 副业) lang:zh -filter:replies min_faves:50"
+      ],
+      "search_sort": "Top",
+      "search_limit": 100,
       "fetch_limit": 10,
       "fetch_reply_text": false,
       "max_replies_per_tweet": 3,
       "max_tweets_to_expand": 10,
-      "reply_min_likes": 5
+      "reply_min_likes": 5,
+      "apify_token_env": "APIFY_TOKEN",
+      "actor_id": "altimis~scweet"
     },
     "openbb": {
       "enabled": false,
@@ -111,7 +119,11 @@
   },
   "filtering": {
     "ai_score_threshold": 6.0,
-    "time_window_hours": 24
+    "time_window_hours": 24,
+    "max_items": null,
+    "category_groups": {},
+    "default_group": "other",
+    "default_group_limit": null
   },
   "webhook": {
     "enabled": false,
@@ -140,7 +152,7 @@
           "elements": [
             {
               "tag": "markdown",
-              "content": "Horizon生成结果: #{result}\nHorizon日报重要资讯数量: #{important_items}/#{all_items}"
+              "content": "信先行生成结果: #{result}\n信先行日报重要资讯数量: #{important_items}/#{all_items}"
             },
             {
               "tag": "hr"

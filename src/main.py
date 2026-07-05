@@ -1,4 +1,4 @@
-"""CLI entry point for Horizon."""
+"""CLI entry point for 信先行."""
 
 import argparse
 import asyncio
@@ -18,15 +18,8 @@ console = Console()
 def print_banner():
     """Print the application banner."""
     banner = r"""
-[bold blue]
-  _    _            _
- | |  | |          (_)
- | |__| | ___  _ __ _ ___  ___  _ __
- |  __  |/ _ \| '__| |_  / / _ \| '_ \
- | |  | | (_) | |  | |/ / | (_) | | | |
- |_|  |_|\___/|_|  |_/___| \___/|_| |_|
-[/bold blue]
-[cyan]  AI-Driven Information Aggregation System[/cyan]
+[bold blue]信先行[/bold blue]
+[cyan]  AI教程 / 赚钱案例 / 效率技巧 Action Card 系统[/cyan]
     """
     console.print(banner)
 
@@ -35,7 +28,7 @@ def main():
     """Main CLI entry point."""
     print_banner()
 
-    parser = argparse.ArgumentParser(description="Horizon - AI-Driven Information Aggregation System")
+    parser = argparse.ArgumentParser(description="信先行 - AI Action Card aggregation system")
     parser.add_argument("--hours", type=int, help="Force fetch from last N hours")
     args = parser.parse_args()
 
@@ -54,11 +47,16 @@ def main():
             config = storage.load_config()
         except FileNotFoundError:
             console.print("[bold red]❌ Configuration file not found![/bold red]\n")
+            data_dir_path = data_dir if isinstance(data_dir, Path) else Path(data_dir)
+            example_path = data_dir_path / "config.example.json"
+            if example_path.exists():
+                console.print(
+                    f"Copy the example config and edit it:\n"
+                    f"  [cyan]cp {example_path} {data_dir_path / 'config.json'}[/cyan]\n"
+                )
             console.print(
-                "Run [bold cyan]uv run horizon-wizard[/bold cyan] to launch the interactive setup wizard,\n"
-                "or create [cyan]data/config.json[/cyan] manually based on the template:\n"
+                "Or run [bold cyan]uv run horizon-wizard[/bold cyan] to launch the interactive setup wizard.\n"
             )
-            print_config_template()
             sys.exit(1)
         except ConfigError as e:
             console.print(f"[bold red]❌ Error loading configuration: {e}[/bold red]")
@@ -117,7 +115,11 @@ def print_config_template():
   },
   "filtering": {
     "ai_score_threshold": 7.0,
-    "time_window_hours": 24
+    "time_window_hours": 24,
+    "max_items": null,
+    "category_groups": {},
+    "default_group": "other",
+    "default_group_limit": null
   }
 }
 

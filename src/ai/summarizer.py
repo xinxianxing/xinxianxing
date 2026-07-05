@@ -1,5 +1,6 @@
 """Daily summary generation — pure programmatic rendering."""
 
+import html
 import re
 from typing import List, Dict
 
@@ -19,14 +20,24 @@ def _pangu(text: str) -> str:
 
 LABELS = {
     "en": {
-        "header": "Horizon Daily",
+        "header": "Xinxianxing Practical Cards",
         "source": "Source",
         "background": "Background",
         "discussion": "Discussion",
         "references": "References",
         "tags": "Tags",
+        "category": "Column",
+        "intro": "One-Line Intro",
+        "how_to": "How To Do It",
+        "suitable_for": "Best For / Use Cases",
+        "evidence": "Effect or Data",
+        "risk": "Credibility / Risk",
+        "score": "Utility Score",
+        "source_link": "Source Link",
+        "selected_items": "From {total} items, {selected} tutorial/case/tip cards were selected",
+        "empty_analyzed": "Analyzed {total} items, but none met the utility threshold.",
         "empty_body": (
-            "No significant developments today. This might indicate:\n"
+            "No practical cards today. This might indicate:\n"
             "- A quiet day in your tracked sources\n"
             "- The AI score threshold is too high\n"
             "- Your information sources need expansion\n\n"
@@ -37,16 +48,26 @@ LABELS = {
         ),
     },
     "zh": {
-        "header": "Horizon 每日速递",
+        "header": "信先行实用卡片",
         "source": "来源",
         "background": "背景",
         "discussion": "社区讨论",
         "references": "参考链接",
         "tags": "标签",
+        "category": "栏目分类",
+        "intro": "一句话简介",
+        "how_to": "具体怎么做",
+        "suitable_for": "适合谁/适用场景",
+        "evidence": "效果或数据",
+        "risk": "可信度/风险提示",
+        "score": "实用度评分",
+        "source_link": "来源链接",
+        "selected_items": "从 {total} 条内容中筛选出 {selected} 条教程/案例/技巧。",
+        "empty_analyzed": "已分析 {total} 条内容，但没有达到实用度阈值的条目。",
         "empty_body": (
-            "今日暂无重要动态，可能原因：\n"
+            "今日暂无实用卡片，可能原因：\n"
             "- 今天关注的信息源较平静\n"
-            "- AI 评分阈值设置过高\n"
+            "- 实用度评分阈值设置过高\n"
             "- 信息源种类有待扩充\n\n"
             "建议：\n"
             "1. 在 config.json 中降低 `ai_score_threshold`\n"
@@ -90,7 +111,7 @@ class DailySummarizer:
 
         header = (
             f"# {labels['header']} - {date}\n\n"
-            f"> From {total_fetched} items, {len(items)} important content pieces were selected\n\n"
+            f"> {labels['selected_items'].format(total=total_fetched, selected=len(items))}\n\n"
             "---\n\n"
         )
 
@@ -102,7 +123,8 @@ class DailySummarizer:
             if language == "zh":
                 t = _pangu(t)
             score = item.ai_score or "?"
-            toc_entries.append(f"{i + 1}. [{t}](#item-{i + 1}) \u2b50\ufe0f {score}/10")
+            signal_type = item.signal_type.value if item.signal_type else "NEWS"
+            toc_entries.append(f"{i + 1}. [{t}](#item-{i + 1}) · {signal_type} · Score: {score} / 10")
         toc = "\n".join(toc_entries) + "\n\n---\n\n"
 
         parts = [self._format_item(item, labels, language, i + 1) for i, item in enumerate(items)]
@@ -124,14 +146,14 @@ class DailySummarizer:
         if language == "zh":
             header = (
                 f"# {labels['header']} - {date}\n\n"
-                f"> 从 {total_fetched} 条内容中筛选出 {len(items)} 条重要资讯。\n\n"
-                "下面会按新闻逐条发送详情，你可以只看感兴趣的标题。\n\n"
+                f"> 从 {total_fetched} 条内容中筛选出 {len(items)} 条教程/案例/技巧。\n\n"
+                "下面会按卡片逐条发送详情，你可以只看感兴趣的标题。\n\n"
             )
         else:
             header = (
                 f"# {labels['header']} - {date}\n\n"
-                f"> Selected {len(items)} important items from {total_fetched} fetched items.\n\n"
-                "Details will be sent item by item so you can read only the topics you care about.\n\n"
+                f"> Selected {len(items)} tutorial/case/tip cards from {total_fetched} fetched items.\n\n"
+                "Details will be sent card by card so you can read only the topics you care about.\n\n"
             )
 
         entries = []
@@ -140,7 +162,8 @@ class DailySummarizer:
             if language == "zh":
                 title = _pangu(title)
             score = item.ai_score or "?"
-            entries.append(f"{i}. [{title}]({item.url}) \u2b50\ufe0f {score}/10")
+            signal_type = item.signal_type.value if item.signal_type else "NEWS"
+            entries.append(f"{i}. [{title}]({item.url}) · {signal_type} · Score: {score} / 10")
 
         return header + "\n".join(entries)
 
@@ -156,6 +179,11 @@ class DailySummarizer:
         prefix = f"第 {index}/{total} 条\n\n" if language == "zh" else f"Item {index}/{total}\n\n"
         return prefix + self._format_item(item, labels, language, index).rstrip("-\n ")
 
+    def render_action_card(self, item: ContentItem, language: str, index: int) -> str:
+        """Render one Action Card with the same Markdown structure as a daily draft."""
+        labels = LABELS.get(language, LABELS["en"])
+        return self._format_item(item, labels, language, index)
+
     def _format_item(self, item: ContentItem, labels: dict, language: str, index: int) -> str:
         """Format a single ContentItem into Markdown."""
         _title = item.metadata.get(f"title_{language}") or item.title
@@ -163,13 +191,14 @@ class DailySummarizer:
         url = str(item.url)
         score = item.ai_score or "?"
         meta = item.metadata
+        card_id = html.escape(item.id, quote=True)
+        signal_type = item.signal_type.value if item.signal_type else "NEWS"
 
-        summary = (
-            meta.get(f"detailed_summary_{language}")
-            or meta.get("detailed_summary")
-            or item.ai_summary
-            or ""
-        )
+        intro = item.intro or item.ai_summary or item.what_happened or ""
+        how_to = item.how_to or item.opportunities or []
+        suitable_for = item.suitable_for or item.who_should_care or item.ai_tags
+        evidence = item.evidence or item.why_it_matters or "未提供具体数据"
+        risk = item.credibility_risk or item.risk or ""
         background = meta.get(f"background_{language}") or meta.get("background") or ""
         discussion = (
             meta.get(f"community_discussion_{language}")
@@ -179,7 +208,9 @@ class DailySummarizer:
 
         if language == "zh":
             title = _pangu(title)
-            summary = _pangu(summary)
+            intro = _pangu(intro)
+            evidence = _pangu(evidence)
+            risk = _pangu(risk)
             background = _pangu(background)
             discussion = _pangu(discussion)
 
@@ -193,8 +224,14 @@ class DailySummarizer:
         else:
             source_parts.append(item.author or "unknown")
         if item.published_at:
-            day = item.published_at.strftime("%d").lstrip("0")
-            source_parts.append(item.published_at.strftime(f"%b {day}, %H:%M"))
+            if language == "zh":
+                source_parts.append(
+                    f"{item.published_at.month}月{item.published_at.day}日 "
+                    f"{item.published_at:%H:%M}"
+                )
+            else:
+                day = item.published_at.strftime("%d").lstrip("0")
+                source_parts.append(item.published_at.strftime(f"%b {day}, %H:%M"))
         source_line = " \u00b7 ".join(source_parts)  # ·
 
         discussion_url = meta.get("discussion_url")
@@ -204,10 +241,37 @@ class DailySummarizer:
                 source_line += f' · [{labels["discussion"]}]({discussion_url})'
 
         lines = [
+            f'<section class="action-card" data-card-id="{card_id}" markdown="1">',
             f'<a id="item-{index}"></a>',
-            f"## [{title}]({url}) \u2b50\ufe0f {score}/10",  # ⭐️
+            f"## [{title}]({url})",
             "",
-            summary,
+            f"**{labels['category']}**: `{signal_type}`",
+            "",
+            f"**{labels['intro']}**: {intro}",
+            "",
+            f"**{labels['how_to']}**:",
+        ]
+
+        lines.extend(self._format_list(how_to))
+        lines += [
+            "",
+            f"**{labels['suitable_for']}**: "
+            + (", ".join([f"`{x}`" for x in suitable_for]) if suitable_for else "—"),
+            "",
+            f"**{labels['evidence']}**: {evidence}",
+        ]
+
+        if risk:
+            lines += [
+                "",
+                f"**{labels['risk']}**: {risk}",
+            ]
+
+        lines += [
+            "",
+            f"**{labels['score']}**: Score: {score} / 10",
+            "",
+            f"**{labels['source_link']}**: [原文]({url})",
             "",
             source_line,
         ]
@@ -234,14 +298,22 @@ class DailySummarizer:
             lines.append(f"**{labels['tags']}**: {tags_str}")
 
         lines.append("")
+        lines.append("</section>")
+        lines.append("")
         lines.append("---")
 
         return "\n".join(lines) + "\n\n"
+
+    @staticmethod
+    def _format_list(items: list[str]) -> list[str]:
+        if not items:
+            return ["- —"]
+        return [f"- {item}" for item in items]
 
     def _generate_empty_summary(self, date: str, total_fetched: int, labels: dict) -> str:
         """Generate summary when no high-scoring items were found."""
         return (
             f"# {labels['header']} - {date}\n\n"
-            f"> Analyzed {total_fetched} items, but none met the importance threshold.\n\n"
+            f"> {labels['empty_analyzed'].format(total=total_fetched)}\n\n"
             + labels["empty_body"]
         )

@@ -16,6 +16,7 @@ try:
 except ImportError:
     markdown = None
 
+from ..ai.markdown_utils import clean_app_summary_markdown
 from ..models import EmailConfig
 
 logger = logging.getLogger(__name__)
@@ -95,8 +96,8 @@ class EmailManager:
                                         subscribers = storage_manager.load_subscribers()
                                         self._send_reply(
                                             email_addr,
-                                            "Subscribed to Horizon",
-                                            "You have been successfully subscribed to Horizon daily summaries.",
+                                            "Subscribed to 信先行",
+                                            "You have been successfully subscribed to 信先行 daily summaries.",
                                         )
                                         logger.info(f"Added subscriber: {email_addr}")
                                     else:
@@ -137,8 +138,8 @@ class EmailManager:
                                         subscribers = storage_manager.load_subscribers()
                                         self._send_reply(
                                             email_addr,
-                                            "Unsubscribed from Horizon",
-                                            "You have been successfully unsubscribed from Horizon daily summaries.",
+                                            "Unsubscribed from 信先行",
+                                            "You have been successfully unsubscribed from 信先行 daily summaries.",
                                         )
                                         logger.info(f"Removed subscriber: {email_addr}")
                                     else:
@@ -155,7 +156,8 @@ class EmailManager:
         if not self.config.enabled or not subscribers:
             return
 
-        safe_summary = html.escape(summary_md)
+        cleaned_summary = clean_app_summary_markdown(summary_md)
+        safe_summary = html.escape(cleaned_summary)
         html_content = (
             markdown.markdown(safe_summary)
             if markdown
@@ -202,7 +204,7 @@ class EmailManager:
                     )
                     msg["To"] = subscriber
 
-                    text_part = MIMEText(summary_md, "plain")
+                    text_part = MIMEText(cleaned_summary, "plain")
                     html_part = MIMEText(html_body, "html")
 
                     msg.attach(text_part)

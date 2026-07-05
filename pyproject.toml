@@ -20,6 +20,7 @@ dependencies = [
     "beautifulsoup4>=4.12.0",
     "markdown>=3.10.2",
     "mcp>=1.0.0",
+    "pillow>=10.4.0",
 ]
 
 [project.optional-dependencies]
@@ -31,12 +32,18 @@ openbb = [
     "openbb>=4.4.0",
     "openbb-benzinga>=1.6.0",
 ]
+twitter = [
+    "playwright>=1.40.0",
+    "playwright-stealth>=1.0.0",
+]
 
 [project.scripts]
 horizon = "src.main:main"
+horizon-add = "src.services.manual_add:main"
 horizon-mcp = "src.mcp.server:main"
 horizon-wizard = "src.setup.wizard:main"
 horizon-webhook = "src.services.webhook_cli:main"
+horizon-feedback = "src.services.feedback:main"
 
 [build-system]
 requires = ["hatchling"]
