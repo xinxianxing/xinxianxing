@@ -1238,6 +1238,52 @@ class TestSendDailySummary:
             == "https://xinxianxing.com/2026/07/05/summary-zh.html#item-2"
         )
 
+    def test_item_page_url_can_use_draft_preview_path(self):
+        assert (
+            _item_page_url(
+                "2026-07-05",
+                "zh",
+                2,
+                "https://xinxianxing.com/",
+                draft_preview=True,
+            )
+            == "https://xinxianxing.com/drafts/2026-07-05-summary-zh.html#item-2"
+        )
+
+    def test_summary_delivery_can_use_draft_preview_links(self):
+        """Automated draft runs link to public review previews, not unpublished posts."""
+        os.environ[_TEST_URL_ENV] = _TEST_URL
+        config = WebhookConfig(
+            enabled=True,
+            url_env=_TEST_URL_ENV,
+            delivery="summary",
+        )
+        notifier = WebhookNotifier(config, draft_preview_links=True)
+        summarizer = DailySummarizer()
+        items = [_make_item()]
+
+        with patch.object(notifier, "notify", new_callable=AsyncMock) as mock_notify:
+            _run_async(
+                notifier.send_daily_summary(
+                    summary="## 测试摘要",
+                    important_items=items,
+                    all_items_count=5,
+                    date="2026-07-05",
+                    lang="zh",
+                    summarizer=summarizer,
+                )
+            )
+            vars = mock_notify.call_args[0][0]
+            assert (
+                "https://xinxianxing.com/drafts/2026-07-05-summary-zh.html#item-1"
+                in vars["summary"]
+            )
+            assert (
+                "https://xinxianxing.com/2026/07/05/summary-zh.html#item-1"
+                not in vars["summary"]
+            )
+        del os.environ[_TEST_URL_ENV]
+
     def test_language_filter_skips_non_matching_lang(self):
         """webhook.languages=['zh'] skips 'en' language."""
         os.environ[_TEST_URL_ENV] = _TEST_URL

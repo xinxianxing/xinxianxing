@@ -163,6 +163,11 @@ def test_append_item_to_new_draft_creates_data_and_docs_copy(tmp_path):
     assert docs_path is not None
     assert docs_path.name == "2026-07-05-summary-zh.md"
     assert docs_path.read_text(encoding="utf-8").startswith("---\nlayout: default")
+    preview_path = tmp_path / "docs" / "drafts" / "2026-07-05-summary-zh.md"
+    assert preview_path.exists()
+    assert preview_path.read_text(encoding="utf-8") == docs_path.read_text(
+        encoding="utf-8"
+    )
     assert "新卡片" in card
 
 
@@ -193,6 +198,9 @@ def test_append_item_to_existing_draft_updates_toc_and_docs_copy(tmp_path):
     assert "第二张卡片" in card
     assert docs.startswith("---\nlayout: default")
     assert "第二张卡片" in docs
+    preview_path = tmp_path / "docs" / "drafts" / "2026-07-04-summary-zh.md"
+    assert preview_path.exists()
+    assert preview_path.read_text(encoding="utf-8") == docs
 
 
 def test_add_url_raises_when_ai_returns_no_action_card(monkeypatch, tmp_path):

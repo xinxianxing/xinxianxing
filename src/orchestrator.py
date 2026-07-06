@@ -60,6 +60,7 @@ class XinxianxingOrchestrator:
                 config.webhook,
                 console=self.console,
                 site_base_url=config.site.base_url,
+                draft_preview_links=not config.publishing.auto_publish,
             )
             if config.webhook and config.webhook.enabled
             else None
@@ -172,6 +173,8 @@ class XinxianxingOrchestrator:
                         share_image_draft_path = summary_path
 
                 # Copy to docs/_drafts by default. Only copy to _posts when explicitly enabled.
+                # A docs/drafts copy gives webhook recipients a public review preview
+                # without adding the issue to the published posts collection.
                 try:
                     from pathlib import Path
 
@@ -208,7 +211,13 @@ class XinxianxingOrchestrator:
                     if auto_publish:
                         self.console.print(f"📄 Published {lang.upper()} summary to GitHub Pages: {dest_path}\n")
                     else:
+                        preview_dir = Path("docs/drafts")
+                        preview_dir.mkdir(parents=True, exist_ok=True)
+                        preview_path = preview_dir / post_filename
+                        with open(preview_path, "w", encoding="utf-8") as f:
+                            f.write(front_matter + summary_content)
                         self.console.print(f"📝 Copied {lang.upper()} review draft to: {dest_path}\n")
+                        self.console.print(f"🔗 Copied {lang.upper()} public review preview to: {preview_path}\n")
                 except Exception as e:
                     self.console.print(f"[yellow]⚠️  Failed to copy {lang.upper()} summary draft to docs/: {e}[/yellow]\n")
 

@@ -347,6 +347,10 @@ def _docs_draft_path(root: Path, date: str, language: str) -> Path:
     return root / "docs" / "_drafts" / f"{date}-summary-{language}.md"
 
 
+def _docs_preview_path(root: Path, date: str, language: str) -> Path:
+    return root / "docs" / "drafts" / f"{date}-summary-{language}.md"
+
+
 def _docs_front_matter(date: str, language: str) -> str:
     page_title = f"信先行 Action Cards: {date} ({language.upper()})"
     return (
@@ -400,6 +404,10 @@ async def append_item_to_drafts(
             _docs_front_matter(date, language) + _strip_h1(data_markdown),
             encoding="utf-8",
         )
+
+    preview_path = _docs_preview_path(storage.data_dir.parent, date, language)
+    preview_path.parent.mkdir(parents=True, exist_ok=True)
+    preview_path.write_text(docs_path.read_text(encoding="utf-8"), encoding="utf-8")
 
     return data_path, docs_path, card_markdown
 

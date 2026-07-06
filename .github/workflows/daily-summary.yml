@@ -106,8 +106,8 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          mkdir -p data/drafts docs/_drafts data/share_images
-          git add data/drafts/ docs/_drafts/ data/share_images/
+          mkdir -p data/drafts docs/_drafts docs/drafts data/share_images
+          git add data/drafts/ docs/_drafts/ docs/drafts/ data/share_images/
 
           if git diff --cached --quiet; then
             echo "No generated draft or share image changes to commit."

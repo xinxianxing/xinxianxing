@@ -296,13 +296,18 @@ def _item_page_url(
     lang: str,
     index: int,
     site_base_url: str | None = None,
+    *,
+    draft_preview: bool = False,
 ) -> str:
-    """Build the post-style URL for one Action Card anchor."""
-    try:
-        year, month, day = date.split("-", 2)
-        path = f"{year}/{month}/{day}/summary-{lang}.html"
-    except ValueError:
-        path = f"{date}-summary-{lang}.html"
+    """Build the website URL for one Action Card anchor."""
+    if draft_preview:
+        path = f"drafts/{date}-summary-{lang}.html"
+    else:
+        try:
+            year, month, day = date.split("-", 2)
+            path = f"{year}/{month}/{day}/summary-{lang}.html"
+        except ValueError:
+            path = f"{date}-summary-{lang}.html"
     base_url = _normalize_site_base_url(site_base_url) or _site_base_url()
     return f"{base_url.rstrip('/')}/{path}#item-{index}"
 
@@ -361,9 +366,11 @@ class WebhookNotifier:
         config: WebhookConfig,
         console=None,
         site_base_url: str | None = None,
+        draft_preview_links: bool = False,
     ):
         self.config = config
         self.site_base_url = _normalize_site_base_url(site_base_url) or _site_base_url()
+        self.draft_preview_links = draft_preview_links
         if console is None:
             try:
                 from rich.console import Console
@@ -387,7 +394,13 @@ class WebhookNotifier:
 
     def _item_page_url(self, date: str, lang: str, index: int) -> str:
         """Build this notifier's configured public page URL for one card."""
-        return _item_page_url(date, lang, index, self.site_base_url)
+        return _item_page_url(
+            date,
+            lang,
+            index,
+            self.site_base_url,
+            draft_preview=self.draft_preview_links,
+        )
 
     def _validate_url(self, url: str, source_label: str | None = None) -> str:
         """Validate webhook URL has a valid scheme (http/https) and hostname.

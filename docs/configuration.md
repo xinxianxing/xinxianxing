@@ -678,6 +678,8 @@ For webhook delivery, 信先行 flattens HTML disclosure blocks such as `<detail
 
 When `paid_feishu_url` is configured, 信先行 also sends a separate paid-channel Feishu card after the public webhook. The public webhook sends only the title, category, score, and site link for each selected item. The paid channel receives all score-qualified items for the day, but still keeps the Feishu message concise: title, category, score, one short intro, and a link to the full site content. If `category_feishu` contains URLs for signal types such as `TUTORIAL`, `MONEY_CASE`, or `PRODUCTIVITY_TIP`, 信先行 additionally sends category-only cards to those groups. If any optional URL is blank, invalid, or an unset `${ENV}` placeholder, that optional delivery is skipped and the public webhook continues normally.
 
+When `publishing.auto_publish` is `false`, webhook item links point to the public review preview under `/drafts/YYYY-MM-DD-summary-LANG.html#item-N`. When `auto_publish` is `true`, links point to the normal published post URL under `/YYYY/MM/DD/summary-LANG.html#item-N`.
+
 Use `#{key?limit=N&split=DELIM}` to truncate long values by splitting on `DELIM` and keeping segments until the total character count reaches `N`.
 
 ```text
@@ -764,6 +766,7 @@ and commits only generated review artifacts:
 
 - `data/drafts/`
 - `docs/_drafts/`
+- `docs/drafts/`
 - `data/share_images/`
 
 The workflow explicitly checks that `publishing.auto_publish` is `false` and
@@ -786,7 +789,7 @@ Optional:
 
 ## Static Site
 
-信先行 writes generated summaries to `data/summaries/` when `publishing.auto_publish` is `true`. By default, `auto_publish` is `false`, so generated Action Cards are saved for review in `data/drafts/` and copied to `docs/_drafts/`. When you manually approve a draft, move it into the configured publish location such as `docs/_posts/`.
+信先行 writes generated summaries to `data/summaries/` when `publishing.auto_publish` is `true`. By default, `auto_publish` is `false`, so generated Action Cards are saved for review in `data/drafts/`, copied to `docs/_drafts/`, and mirrored to `docs/drafts/` as a public review preview for webhook links. When you manually approve a draft, move it into the configured publish location such as `docs/_posts/`.
 
 To use GitHub Pages, enable Pages for the repository and run the scheduled workflow or trigger it manually. The generated site is built from the `docs/` directory.
 
@@ -803,7 +806,7 @@ Optional flags:
 - `--date YYYY-MM-DD`: Append to a specific draft date. Defaults to the current UTC day.
 - `--lang zh`: Draft language. Defaults to `zh`.
 
-The command fetches the public page, extracts readable text, reuses the existing Action Card prompt and AI analysis flow, then appends the card to the matching files under `data/drafts/` and `docs/_drafts/`. If the page requires login, blocks automated requests, has a non-page content type, times out, or contains too little readable text, the command exits with a clear error message and does not silently write an incomplete card.
+The command fetches the public page, extracts readable text, reuses the existing Action Card prompt and AI analysis flow, then appends the card to the matching files under `data/drafts/`, `docs/_drafts/`, and `docs/drafts/`. If the page requires login, blocks automated requests, has a non-page content type, times out, or contains too little readable text, the command exits with a clear error message and does not silently write an incomplete card.
 
 ### Share Images
 

@@ -256,6 +256,6 @@ Flow:
 3. Reject login/blocked pages (`401`/`403`), non-page content types, timeouts, and HTTP errors with a clear `ManualAddError`.
 4. Extract title, publication time, and readable body text from `article`, `main`, common content containers, or page body fallback.
 5. Reject pages with too little readable text so image-only pages, login shells, and JavaScript-only pages are not silently added.
-6. Reuse the existing AI Action Card generation path and append the result to the matching `data/drafts/` and `docs/_drafts/` files.
+6. Reuse the existing AI Action Card generation path and append the result to the matching `data/drafts/`, `docs/_drafts/`, and `docs/drafts/` files.
 
 Manual items use `source_type = "manual"` and metadata such as `feed_name = "Manual Add"`, `manual_url`, and `extracted_chars`.
