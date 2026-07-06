@@ -759,10 +759,11 @@ With this layout, 信先行 sends one interactive card containing the overview a
 
 ## GitHub Actions Daily Drafts
 
-`.github/workflows/daily-summary.yml` runs once per day at 00:00 UTC, which is
-08:00 in Asia/Shanghai. The workflow uses `data/config.github.json`, maps
+`.github/workflows/daily-summary.yml` runs once per day at 00:17 UTC, which is
+08:17 in Asia/Shanghai. The workflow uses `data/config.github.json`, maps
 runtime secrets from GitHub Actions Secrets, runs `uv run xinxianxing --hours 24`,
-and commits only generated review artifacts:
+commits generated review artifacts, and deploys the built static site to
+Cloudflare Pages when Cloudflare credentials are configured:
 
 - `data/drafts/`
 - `docs/_drafts/`
@@ -786,12 +787,24 @@ Optional:
 - `XINXIANXING_TUTORIAL_FEISHU_URL`: Category Feishu/Lark bot webhook URL for `TUTORIAL` cards.
 - `XINXIANXING_MONEY_CASE_FEISHU_URL`: Category Feishu/Lark bot webhook URL for `MONEY_CASE` cards.
 - `XINXIANXING_PRODUCTIVITY_TIP_FEISHU_URL`: Category Feishu/Lark bot webhook URL for `PRODUCTIVITY_TIP` cards.
+- `CLOUDFLARE_ACCOUNT_ID`: Cloudflare account ID for the `xinxianxing` Pages project.
+- `CLOUDFLARE_API_TOKEN`: Cloudflare API token with Account > Cloudflare Pages > Edit permission.
+
+If either Cloudflare secret is missing, the daily workflow still generates and
+commits drafts, but skips Cloudflare deployment with a warning.
+
+`.github/workflows/deploy-docs.yml` also builds and deploys the Cloudflare site
+when `docs/**` or the Cloudflare build script changes. This covers manual
+publishing changes such as moving an approved draft into `docs/_posts/`.
 
 ## Static Site
 
 信先行 writes generated summaries to `data/summaries/` when `publishing.auto_publish` is `true`. By default, `auto_publish` is `false`, so generated Action Cards are saved for review in `data/drafts/`, copied to `docs/_drafts/`, and mirrored to `docs/drafts/` as a public review preview for webhook links. When you manually approve a draft, move it into the configured publish location such as `docs/_posts/`.
 
-To use GitHub Pages, enable Pages for the repository and run the scheduled workflow or trigger it manually. The generated site is built from the `docs/` directory.
+The production site on Cloudflare Pages is built by `scripts/build_cloudflare_site.py`
+from the `docs/` directory into `dist/`, then deployed with Wrangler. Published
+posts appear on the homepage and feeds; draft previews under `/drafts/` are
+rendered for review links but are not added to the homepage or RSS feeds.
 
 ### Manual URL Add
 
