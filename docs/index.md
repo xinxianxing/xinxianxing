@@ -11,11 +11,25 @@ title: 今日AI精选
     <h1>信先行</h1>
     <p>每天筛掉噪声，只留下普通人值得学、值得试、值得收藏的 AI 行动卡片。</p>
     <div class="hero-actions">
-      <a class="primary-action" href="#latest-zh">查看最新精选</a>
+      <a class="primary-action" href="/tutorials/">进入教程库</a>
+      <a class="secondary-action" href="#latest-zh">查看最新精选</a>
       <a class="secondary-action" href="/feed-zh.xml">订阅 RSS</a>
     </div>
   </div>
   <img class="hero-visual" src="/assets/brand-sunrise.svg" alt="信先行品牌视觉">
+</section>
+
+<section class="home-tutorial-entry" aria-label="教程库入口">
+  <div class="section-heading">
+    <p class="eyebrow">TUTORIAL LIBRARY</p>
+    <h2>教程库</h2>
+    <p>人工精选的深度教程，按 AI 自动化、副业赚钱、电商运营、内容创作、海外获客等场景整理。</p>
+  </div>
+  <a class="tutorial-entry-panel" href="/tutorials/">
+    <span class="tutorial-entry-label">会员教程 / 免费样章</span>
+    <strong>查看可直接照着做的 AI 教程</strong>
+    <span>包含步骤拆解、工具清单、Prompt 模板、成本效果和风险提示。</span>
+  </a>
 </section>
 
 <section class="focus-grid" aria-label="内容栏目">
@@ -55,11 +69,25 @@ title: 今日AI精选
     <h1>Xinxianxing</h1>
     <p>Daily AI Action Cards for people who want practical things to learn, try, and save.</p>
     <div class="hero-actions">
-      <a class="primary-action" href="#latest-en">Read latest picks</a>
+      <a class="primary-action" href="/tutorials/">Tutorial Library</a>
+      <a class="secondary-action" href="#latest-en">Read latest picks</a>
       <a class="secondary-action" href="/feed-en.xml">Subscribe RSS</a>
     </div>
   </div>
   <img class="hero-visual" src="/assets/brand-sunrise.svg" alt="Xinxianxing brand visual">
+</section>
+
+<section class="home-tutorial-entry" aria-label="Tutorial library entry">
+  <div class="section-heading">
+    <p class="eyebrow">TUTORIAL LIBRARY</p>
+    <h2>Tutorial Library</h2>
+    <p>Curated deep tutorials organized by AI automation, side projects, ecommerce, content creation, and overseas growth.</p>
+  </div>
+  <a class="tutorial-entry-panel" href="/tutorials/">
+    <span class="tutorial-entry-label">Member tutorials / free samples</span>
+    <strong>Open practical AI tutorials</strong>
+    <span>Includes steps, tools, prompt templates, cost notes, expected results, and risks.</span>
+  </a>
 </section>
 
 <section class="focus-grid" aria-label="Content categories">

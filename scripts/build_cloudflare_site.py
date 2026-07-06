@@ -8,6 +8,7 @@ stay private.
 from __future__ import annotations
 
 import html
+import json
 import re
 import shutil
 from dataclasses import dataclass
@@ -16,10 +17,19 @@ from pathlib import Path
 
 import markdown
 
+from src.services.tutorials import (
+    TUTORIAL_CATEGORIES,
+    Tutorial,
+    load_access_codes,
+    load_tutorials,
+)
+
 
 ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / "docs"
 DIST = ROOT / "dist"
+TUTORIALS_PUBLISHED = ROOT / "data/tutorials/published"
+TUTORIAL_CODES = ROOT / "data/tutorials/codes.json"
 
 SITE_TITLE = "信先行"
 SITE_DESCRIPTION = "AI教程、赚钱案例与效率技巧行动卡片"
@@ -93,9 +103,12 @@ def main() -> None:
 
     posts = load_posts()
     draft_previews = load_draft_previews()
+    tutorials = load_tutorials(TUTORIALS_PUBLISHED)
+    tutorial_codes = load_access_codes(TUTORIAL_CODES)
     render_pages(posts)
     render_posts(posts)
     render_draft_previews(draft_previews)
+    render_tutorials(tutorials, tutorial_codes)
     write_feeds(posts)
     copy_assets()
     write_redirects()
@@ -192,6 +205,169 @@ def render_draft_previews(drafts: list[Page]) -> None:
     for draft in drafts:
         html_body = markdown_to_html(draft.body)
         write_page(draft.permalink, draft.title, html_body)
+
+
+def render_tutorials(tutorials: list[Tutorial], codes: list[str]) -> None:
+    list_body = build_tutorial_list_page(tutorials)
+    write_page("/tutorials/index.html", "教程库", list_body)
+    write_page("/tutorials.html", "教程库", list_body)
+
+    categories_body = build_tutorial_categories_page(tutorials)
+    write_page("/tutorials/categories/index.html", "教程分类", categories_body)
+    write_page("/tutorials/categories.html", "教程分类", categories_body)
+
+    for tutorial in tutorials:
+        detail_body = build_tutorial_detail_page(tutorial, codes)
+        write_page(f"/tutorials/{tutorial.slug}/index.html", tutorial.title, detail_body)
+        write_page(f"/tutorials/{tutorial.slug}.html", tutorial.title, detail_body)
+
+
+def build_tutorial_list_page(tutorials: list[Tutorial]) -> str:
+    cards = build_tutorial_cards(tutorials)
+    category_links = "\n".join(
+        f'<a href="/tutorials/categories/#{html.escape(category, quote=True)}">{html.escape(category)}</a>'
+        for category in TUTORIAL_CATEGORIES
+    )
+    return f"""<section class="tutorial-intro">
+  <p>人工精选的深度教程，优先收录能直接上手的 AI 自动化、赚钱案例和效率技巧。</p>
+  <div class="tutorial-category-links">
+    {category_links}
+  </div>
+</section>
+{cards}
+"""
+
+
+def build_tutorial_categories_page(tutorials: list[Tutorial]) -> str:
+    buttons = [
+        '<button class="tutorial-filter-button active" type="button" data-category="all">全部</button>'
+    ]
+    buttons.extend(
+        f'<button class="tutorial-filter-button" type="button" data-category="{html.escape(category, quote=True)}">{html.escape(category)}</button>'
+        for category in TUTORIAL_CATEGORIES
+    )
+    cards = build_tutorial_cards(tutorials, show_empty_category=True)
+    return f"""<section class="tutorial-intro">
+  <p>按分类快速筛选教程。这里只展示已经手动发布到教程库的内容。</p>
+  <div class="tutorial-filter-bar" aria-label="教程分类筛选">
+    {''.join(buttons)}
+  </div>
+</section>
+{cards}
+"""
+
+
+def build_tutorial_cards(tutorials: list[Tutorial], show_empty_category: bool = False) -> str:
+    if not tutorials:
+        return '<p class="empty-state">暂无已发布教程。</p>'
+
+    cards = []
+    for tutorial in tutorials:
+        status = "会员" if tutorial.is_member_only else "免费"
+        status_class = "member" if tutorial.is_member_only else "free"
+        category = html.escape(tutorial.category, quote=True)
+        cards.append(
+            f"""<article class="tutorial-card" data-category="{category}">
+  <a href="{tutorial_permalink(tutorial)}">
+    <div class="tutorial-card-meta">
+      <span class="tutorial-category">{html.escape(tutorial.category)}</span>
+      <span class="tutorial-status {status_class}">{status}</span>
+    </div>
+    <h2>{html.escape(tutorial.title)}</h2>
+    <p>{html.escape(tutorial.summary or "暂无简介")}</p>
+    <span class="tutorial-card-audience">{html.escape(tutorial.audience or "适用场景待补充")}</span>
+  </a>
+</article>"""
+        )
+
+    empty = (
+        '<p class="empty-state tutorial-filter-empty" hidden>这个分类暂时没有已发布教程。</p>'
+        if show_empty_category
+        else ""
+    )
+    return '<section class="tutorial-card-grid">\n' + "\n".join(cards) + f"\n</section>{empty}"
+
+
+def build_tutorial_detail_page(tutorial: Tutorial, codes: list[str]) -> str:
+    locked = tutorial.is_member_only
+    lock_class = " is-locked" if locked else ""
+    lock_box = build_tutorial_lock_box(codes) if locked else ""
+    source = build_tutorial_source_link(tutorial)
+    member_status = "会员内容" if tutorial.is_member_only else "免费教程"
+    updated = tutorial.updated_at or "未标注"
+    return f"""<section class="tutorial-detail-head">
+  <div class="tutorial-card-meta">
+    <span class="tutorial-category">{html.escape(tutorial.category)}</span>
+    <span class="tutorial-status {'member' if tutorial.is_member_only else 'free'}">{member_status}</span>
+  </div>
+  <p class="tutorial-detail-summary">{html.escape(tutorial.summary or "暂无简介")}</p>
+  <dl class="tutorial-free-meta">
+    <div>
+      <dt>适合谁/适用场景</dt>
+      <dd>{html.escape(tutorial.audience or "未填写")}</dd>
+    </div>
+    <div>
+      <dt>原帖链接</dt>
+      <dd>{source}</dd>
+    </div>
+    <div>
+      <dt>更新时间</dt>
+      <dd>{html.escape(updated)}</dd>
+    </div>
+  </dl>
+</section>
+{lock_box}
+<section class="tutorial-member-content{lock_class}" data-tutorial-member-content>
+  {render_tutorial_field("原帖核心观点", tutorial.source_summary)}
+  {render_tutorial_field("中文步骤拆解", tutorial.steps)}
+  {render_tutorial_field("使用工具", tutorial.tools)}
+  {render_tutorial_field("可复制Prompt", tutorial.prompt_template, as_prompt=True)}
+  {render_tutorial_field("实操案例/实测结果", tutorial.case_result)}
+  {render_tutorial_field("国内可替代方案", tutorial.alternatives)}
+  {render_tutorial_field("成本与预计效果", tutorial.cost_and_effect)}
+  {render_tutorial_field("风险和注意事项", tutorial.risk_notice)}
+</section>
+"""
+
+
+def build_tutorial_lock_box(codes: list[str]) -> str:
+    payload = json.dumps({"codes": codes}, ensure_ascii=False).replace("</", "<\\/")
+    return f"""<section class="tutorial-lock" data-tutorial-lock>
+  <h2>输入授权码解锁</h2>
+  <p>会员内容包含步骤拆解、工具清单、Prompt 模板、成本效果和风险提示。</p>
+  <form class="tutorial-unlock-form">
+    <input type="password" name="code" autocomplete="off" placeholder="输入授权码" aria-label="授权码">
+    <button type="submit">解锁</button>
+  </form>
+  <p class="tutorial-unlock-message" aria-live="polite"></p>
+  <script type="application/json" id="tutorial-access-codes">{payload}</script>
+</section>"""
+
+
+def build_tutorial_source_link(tutorial: Tutorial) -> str:
+    author = tutorial.source_author or "原帖"
+    if not tutorial.source_url:
+        return html.escape(author)
+    return (
+        f'<a href="{html.escape(tutorial.source_url, quote=True)}" '
+        f'target="_blank" rel="noopener noreferrer">{html.escape(author)}</a>'
+    )
+
+
+def render_tutorial_field(label: str, value: str, as_prompt: bool = False) -> str:
+    content = value.strip() if value else "未填写"
+    if as_prompt:
+        body = f'<pre class="tutorial-prompt"><code>{html.escape(content)}</code></pre>'
+    else:
+        body = markdown_to_html(content)
+    return f"""<article class="tutorial-field">
+  <h2>{html.escape(label)}</h2>
+  {body}
+</article>"""
+
+
+def tutorial_permalink(tutorial: Tutorial) -> str:
+    return f"/tutorials/{tutorial.slug}/"
 
 
 def render_index_content(body: str, posts: list[Page]) -> str:
@@ -309,6 +485,7 @@ def write_page(permalink: str, title: str, body_html: str) -> None:
 def layout(title: str, body_html: str, permalink: str) -> str:
     is_home = permalink == "/index.html"
     is_draft = permalink.startswith("/drafts/")
+    is_tutorial = permalink.startswith("/tutorials")
     canonical = absolute_url(permalink)
     if is_home:
         canonical = SITE_URL
@@ -316,10 +493,15 @@ def layout(title: str, body_html: str, permalink: str) -> str:
     body_class = "home-page" if is_home else "article-page"
     if is_draft:
         body_class += " draft-preview-page"
+    if is_tutorial:
+        body_class += " tutorial-page"
     robots_meta = '  <meta name="robots" content="noindex,nofollow">\n' if is_draft else ""
     article_header = ""
     if not is_home:
-        eyebrow = "待审核草稿" if is_draft else "已发布精选"
+        if is_tutorial:
+            eyebrow = "教程库"
+        else:
+            eyebrow = "待审核草稿" if is_draft else "已发布精选"
         article_header = f"""    <header class="article-title">
       <p class="eyebrow">{eyebrow}</p>
       <h1>{escaped_title}</h1>
@@ -353,6 +535,7 @@ def layout(title: str, body_html: str, permalink: str) -> str:
       <span>信先行</span>
     </a>
     <div class="site-actions">
+      <a class="site-feed-link" href="/tutorials/">教程库</a>
       <a class="site-feed-link" href="/feed-zh.xml">RSS</a>
     </div>
   </header>
