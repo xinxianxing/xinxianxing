@@ -1,7 +1,8 @@
 """Build the public 信先行 static site from docs/.
 
-The public build includes reader-facing pages, published posts, feeds, and
-minimal assets. Drafts and project-maintenance docs stay private.
+The public build includes reader-facing pages, published posts, feeds, review
+preview drafts for webhook links, and minimal assets. Project-maintenance docs
+stay private.
 """
 
 from __future__ import annotations
@@ -91,8 +92,10 @@ def main() -> None:
     DIST.mkdir(parents=True)
 
     posts = load_posts()
+    draft_previews = load_draft_previews()
     render_pages(posts)
     render_posts(posts)
+    render_draft_previews(draft_previews)
     write_feeds(posts)
     copy_assets()
     write_redirects()
@@ -131,6 +134,27 @@ def load_posts() -> list[Page]:
     return posts
 
 
+def load_draft_previews() -> list[Page]:
+    drafts: list[Page] = []
+    for path in sorted((DOCS / "drafts").glob("*.md"), reverse=True):
+        front, body = split_front_matter(path.read_text(encoding="utf-8"))
+        draft_date = parse_date(front.get("date")) or date_from_filename(path)
+        lang = front.get("lang", "")
+        raw_title = front.get("title") or title_from_markdown(body) or path.stem
+        title = public_post_title(raw_title, draft_date, lang)
+        drafts.append(
+            Page(
+                source=path,
+                title=title,
+                body=body,
+                permalink=f"/drafts/{path.with_suffix('').name}.html",
+                lang=lang,
+                published_at=draft_date,
+            )
+        )
+    return drafts
+
+
 def public_post_title(title: str, post_date: date | None, lang: str | None) -> str:
     if post_date and re.search(r"\bsummary\b|Action Cards", title, re.IGNORECASE):
         if lang == "en":
@@ -162,6 +186,12 @@ def render_posts(posts: list[Page]) -> None:
     for post in posts:
         html_body = markdown_to_html(post.body)
         write_page(post.permalink, post.title, html_body)
+
+
+def render_draft_previews(drafts: list[Page]) -> None:
+    for draft in drafts:
+        html_body = markdown_to_html(draft.body)
+        write_page(draft.permalink, draft.title, html_body)
 
 
 def render_index_content(body: str, posts: list[Page]) -> str:
@@ -278,15 +308,20 @@ def write_page(permalink: str, title: str, body_html: str) -> None:
 
 def layout(title: str, body_html: str, permalink: str) -> str:
     is_home = permalink == "/index.html"
+    is_draft = permalink.startswith("/drafts/")
     canonical = absolute_url(permalink)
     if is_home:
         canonical = SITE_URL
     escaped_title = html.escape(title)
     body_class = "home-page" if is_home else "article-page"
+    if is_draft:
+        body_class += " draft-preview-page"
+    robots_meta = '  <meta name="robots" content="noindex,nofollow">\n' if is_draft else ""
     article_header = ""
     if not is_home:
+        eyebrow = "待审核草稿" if is_draft else "已发布精选"
         article_header = f"""    <header class="article-title">
-      <p class="eyebrow">已发布精选</p>
+      <p class="eyebrow">{eyebrow}</p>
       <h1>{escaped_title}</h1>
     </header>
 """
@@ -302,6 +337,7 @@ def layout(title: str, body_html: str, permalink: str) -> str:
   <meta property="og:type" content="website">
   <meta property="og:url" content="{canonical}">
   <meta property="og:image" content="{absolute_url('/assets/brand-sunrise.svg')}">
+{robots_meta.rstrip()}
   <link rel="canonical" href="{canonical}">
   <link rel="icon" href="/assets/brand-sunrise.svg" type="image/svg+xml">
   <link rel="alternate" type="application/atom+xml" title="信先行 · 全部精选" href="/feed.xml">
