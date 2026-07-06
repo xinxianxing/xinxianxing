@@ -43,6 +43,8 @@
 
   /** Set up EN/中文 language toggle as a page-level control */
   function setupLanguageToggle() {
+    if (document.body.classList.contains('tutorial-page')) return;
+
     // Create toggle buttons
     var toggle = document.createElement('div');
     toggle.className = 'lang-toggle';
@@ -199,10 +201,103 @@
     });
   }
 
+  /** Unlock tutorial member sections with a simple local code list */
+  function setupTutorialUnlock() {
+    var lock = document.querySelector('[data-tutorial-lock]');
+    var content = document.querySelector('[data-tutorial-member-content]');
+    if (!lock || !content) return;
+
+    var storageKey = 'xinxianxing-tutorial-unlocked';
+    var form = lock.querySelector('.tutorial-unlock-form');
+    var input = lock.querySelector('input[name="code"]');
+    var message = lock.querySelector('.tutorial-unlock-message');
+    var codes = [];
+
+    var script = document.getElementById('tutorial-access-codes');
+    if (script) {
+      try {
+        var payload = JSON.parse(script.textContent || '{}');
+        if (Array.isArray(payload.codes)) codes = payload.codes.map(function (code) {
+          return String(code).trim();
+        }).filter(Boolean);
+      } catch (e) {
+        codes = [];
+      }
+    }
+
+    function reveal() {
+      content.classList.remove('is-locked');
+      lock.hidden = true;
+    }
+
+    try {
+      if (localStorage.getItem(storageKey) === 'true') {
+        reveal();
+        return;
+      }
+    } catch (e) { /* noop */ }
+
+    if (!form || !input) return;
+
+    form.addEventListener('submit', function (event) {
+      event.preventDefault();
+      var value = input.value.trim();
+      if (codes.indexOf(value) !== -1) {
+        try { localStorage.setItem(storageKey, 'true'); } catch (e) { /* noop */ }
+        reveal();
+        return;
+      }
+      if (message) {
+        message.textContent = codes.length ? '授权码不正确，请检查后再试。' : '授权码暂未配置，请联系站点管理员。';
+      }
+    });
+  }
+
+  /** Filter tutorial category cards on the categories page */
+  function setupTutorialFilters() {
+    var buttons = document.querySelectorAll('.tutorial-filter-button[data-category]');
+    var cards = document.querySelectorAll('.tutorial-card[data-category]');
+    if (!buttons.length || !cards.length) return;
+
+    var empty = document.querySelector('.tutorial-filter-empty');
+
+    function setCategory(category) {
+      var shown = 0;
+      buttons.forEach(function (button) {
+        button.classList.toggle('active', button.getAttribute('data-category') === category);
+      });
+      cards.forEach(function (card) {
+        var match = category === 'all' || card.getAttribute('data-category') === category;
+        card.hidden = !match;
+        if (match) shown += 1;
+      });
+      if (empty) empty.hidden = shown !== 0;
+      if (category !== 'all') {
+        try { history.replaceState(null, '', '#' + encodeURIComponent(category)); } catch (e) { /* noop */ }
+      }
+    }
+
+    buttons.forEach(function (button) {
+      button.addEventListener('click', function () {
+        setCategory(button.getAttribute('data-category') || 'all');
+      });
+    });
+
+    var initial = decodeURIComponent((window.location.hash || '').replace(/^#/, ''));
+    if (initial) {
+      var hasInitial = Array.prototype.some.call(buttons, function (button) {
+        return button.getAttribute('data-category') === initial;
+      });
+      if (hasInitial) setCategory(initial);
+    }
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     processScoreBadges();
     markSemanticElements();
     setupLanguageToggle();
     setupActionCardFeedback();
+    setupTutorialUnlock();
+    setupTutorialFilters();
   });
 })();
