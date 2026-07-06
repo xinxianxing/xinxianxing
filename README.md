@@ -330,7 +330,7 @@ The generated report will be saved to `data/summaries/`.
 
 ### 4. Automate (Optional)
 
-Xinxianxing works great as a **GitHub Actions** cron job. See [`.github/workflows/daily-summary.yml`](.github/workflows/daily-summary.yml) for the daily draft workflow. It runs the pipeline, commits generated review drafts, public review previews, and share images back to the repository, and leaves `docs/_posts/` for manual publishing.
+Xinxianxing works great as a **GitHub Actions** cron job. See [`.github/workflows/daily-summary.yml`](.github/workflows/daily-summary.yml) for the daily draft workflow. It runs the pipeline, commits generated review drafts, public review previews, and share images back to the repository, deploys the built site to Cloudflare Pages when Cloudflare secrets are configured, and leaves `docs/_posts/` for manual publishing.
 
 ## Supported Sources
 

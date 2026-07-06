@@ -15,6 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      deployments: write
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
@@ -116,3 +117,29 @@ jobs:
 
           git commit -m "chore: daily 信先行 draft ${DATE}"
           git push
+
+      - name: Check Cloudflare deploy secrets
+        id: cloudflare
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::warning::CLOUDFLARE_API_TOKEN or CLOUDFLARE_ACCOUNT_ID is not set; skipping Cloudflare Pages deployment."
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "enabled=true" >> "$GITHUB_OUTPUT"
+
+      - name: Build Cloudflare site
+        if: steps.cloudflare.outputs.enabled == 'true'
+        run: uv run python scripts/build_cloudflare_site.py
+
+      - name: Deploy Cloudflare Pages
+        if: steps.cloudflare.outputs.enabled == 'true'
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy dist --project-name=xinxianxing --branch=main
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
