@@ -1,185 +1,263 @@
 # 信先行实用卡片 - 2026-07-06
 
-> 从 18 条内容中筛选出 4 条教程/案例/技巧。
+> 从 15 条内容中筛选出 6 条教程/案例/技巧。
 
 ---
 
-1. [将复杂 AI 任务拆分为分步工作流](#item-1) · PRODUCTIVITY_TIP · Score: 7.0 / 10
-2. [学术论文人性化改写提示词](#item-2) · TUTORIAL · Score: 6.0 / 10
-3. [前沿模型审查评判提示词，返回 42 条发现](#item-3) · TUTORIAL · Score: 6.0 / 10
-4. [脑暴式提示词：直接跟 AI 聊天](#item-4) · PRODUCTIVITY_TIP · Score: 6.0 / 10
+1. [设计令牌解决 AI 网站千篇一律问题](#item-1) · TUTORIAL · Score: 8.0 / 10
+2. [决策笔记：LLM 代理的新模式](#item-2) · TUTORIAL · Score: 7.0 / 10
+3. [学术论文人性化改写提示词](#item-3) · TUTORIAL · Score: 7.0 / 10
+4. [用好 Claude Code Fable 5 的三个秘诀](#item-4) · TUTORIAL · Score: 7.0 / 10
+5. [精简提示词让 AI 输出更佳](#item-5) · PRODUCTIVITY_TIP · Score: 6.0 / 10
+6. [提示词改动提升 SEO 内容质量](#item-6) · TUTORIAL · Score: 6.0 / 10
 
 ---
 
-<section class="action-card" data-card-id="reddit:subreddit-rss:t3_1unvcya" markdown="1">
+<section class="action-card" data-card-id="reddit:subreddit-rss:t3_1uoqcef" markdown="1">
 <a id="item-1"></a>
-## [将复杂 AI 任务拆分为分步工作流](https://www.reddit.com/r/PromptEngineering/comments/1unvcya/i_stopped_trying_to_write_perfect_prompts_and_my/)
+## [设计令牌解决 AI 网站千篇一律问题](https://www.reddit.com/r/PromptEngineering/comments/1uoqcef/the_generic_ai_website_look_is_a_solved_problem/)
 
-**栏目分类**: `PRODUCTIVITY_TIP`
+**栏目分类**: `TUTORIAL`
 
-**一句话简介**: 将复杂任务拆分为多个小步骤，每个步骤一个清晰目标，逐步推进，比一次性大提示词更有效。
+**一句话简介**: Anthropic 官方文档指出，AI 生成网站看起来千篇一律的原因是“分布收敛”，解决方案不是更好的提示词，而是使用具体的设计令牌。
 
 **具体怎么做**:
-- 将任务拆分为多个小阶段，例如：研究 → 提取关键观点 → 创建大纲 → 写初稿 → 改进清晰度
-- 每个阶段只给AI一个明确的目标，输出作为下一阶段的输入
-- 手动复制输出到下一个提示词，或使用工具（如Workflowly）自动串联步骤
+- 1. 识别问题：AI生成网站时，如果视觉设计描述过于模糊（如“现代”、“有创意”），模型会从训练数据分布的中心采样，导致输出趋同于最常见的SaaS模板。
+- 2. 避免使用形容词提示：像“让它现代一点”或“有创意”这类提示仍然不够具体，模型只会从同一通用簇中采样附近点。
+- 3. 使用设计令牌（Design Tokens）：提供具体的视觉参数，如字体、颜色、间距、圆角等，消除不确定性。例如指定“字体: Inter, 颜色: #333背景 #fff, 主色: #6C63FF, 卡片圆角: 8px, 间距: 24px”。
+- 4. 将设计令牌作为系统提示的一部分，或通过结构化输出（如JSON）传递给模型。
 
-**适合谁/适用场景**: `需要高质量长文输出的写作者`, `使用AI进行复杂分析的研究者`, `希望提升AI输出一致性的用户`
+**适合谁/适用场景**: `使用AI生成前端界面的开发者`, `希望避免AI输出同质化设计的UI设计师`, `提示工程师`, `需要快速生成定制化网站原型的人`
 
-**效果或数据**: 未提供具体数据
+**效果或数据**: 未提供具体数据，但引用 Anthropic 官方文档说明该方法是经过验证的。
 
-**可信度/风险提示**: 作者自建工具 Workflowly，可能有推广倾向；分步法需手动复制或依赖工具，增加操作成本
+**可信度/风险提示**: 该方法基于 Anthropic 的官方文档，可靠性较高。但实际效果取决于设计令牌的详细程度和模型对令牌的遵循能力。
 
-**实用度评分**: Score: 7.0 / 10
+**实用度评分**: Score: 8.0 / 10
 
-**来源链接**: [原文](https://www.reddit.com/r/PromptEngineering/comments/1unvcya/i_stopped_trying_to_write_perfect_prompts_and_my/)
+**来源链接**: [原文](https://www.reddit.com/r/PromptEngineering/comments/1uoqcef/the_generic_ai_website_look_is_a_solved_problem/)
 
-reddit · r/PromptEngineering · /u/Zestyclose-Book-5385 · 7月5日 07:00
+reddit · r/PromptEngineering · /u/Professional-Rest138 · 7月6日 07:27
 
-**背景**: 提示词链是一种将复杂任务分解为连续子任务的技术，每个子任务由单独的提示词处理。这提高了可靠性，并允许在每个阶段进行人工监督。它与编写一个包罗万象的提示词的常见方法形成对比。
+**背景**: 设计令牌是视觉设计属性（颜色、排版、间距）的标准化命名值，是设计系统中的单一事实来源。AI 模型中的分布收敛是指当提示词不够具体时，模型会默认采用训练数据中最常见的模式——因此产生千篇一律的 SaaS 风格。基于形容词的提示词如“现代”或“创意”仍然不够具体，无法摆脱这种收敛。
 
 <details><summary>参考链接</summary>
 <ul>
-<li><a href="https://www.aiawareness.ai/ai-resources/prompt-engineering-and-ai-interaction-skills/multi-step-workflow-prompting/">Multi - Step Workflow Prompting | AI Awareness</a></li>
-<li><a href="https://masterprompting.net/blog/prompt-chaining-practical-guide">Prompt Chaining in Practice: How to Break... | MasterPrompting.net</a></li>
+<li><a href="https://grokipedia.com/page/Design_tokens">Design tokens</a></li>
+<li><a href="https://design.dev/guides/design-systems/">Design Systems & Design Tokens Explained — design.dev</a></li>
+<li><a href="https://m3.material.io/foundations/design-tokens/overview">Design tokens – Material Design 3</a></li>
 
 </ul>
 </details>
 
-**标签**: `#需要高质量长文输出的写作者`, `#使用AI进行复杂分析的研究者`, `#希望提升AI输出一致性的用户`
+**社区讨论**: Reddit 帖子获得强烈正面反响，评论者一致认为设计令牌比调整提示词更有效。一些人分享了额外技巧，例如将设计令牌文件用作系统提示或与 Figma 等工具集成。少数人指出该方法需要前期投入，但能带来一致性回报。
+
+**标签**: `#使用AI生成前端界面的开发者`, `#希望避免AI输出同质化设计的UI设计师`, `#提示工程师`, `#需要快速生成定制化网站原型的人`
+
+</section>
+
+---
+
+<section class="action-card" data-card-id="reddit:subreddit-rss:t3_1uormlv" markdown="1">
+<a id="item-2"></a>
+## [决策笔记：LLM 代理的新模式](https://www.reddit.com/r/PromptEngineering/comments/1uormlv/new_ai_pattern_decision_notes_for_llm_agents/)
+
+**栏目分类**: `TUTORIAL`
+
+**一句话简介**: 一种轻量级决策记录模式，帮助 AI 代理在行动前回顾历史判断，避免偏离目标。
+
+**具体怎么做**:
+- 1. 创建一个 decision-notes/ 目录，用于存储代理的过往决策记录。
+- 2. 每条决策笔记包含：决策内容、依据证据、以及明确的“何时重新审视”触发条件。
+- 3. 在代理执行工具前，先检查决策笔记，确认当前行动是否与之前人类认可的决策一致。
+- 4. 如果新行动与历史决策冲突，代理应标记冲突而非盲目执行。
+
+**适合谁/适用场景**: `使用LLM代理进行自动化工作流的开发者`, `需要长期稳定执行任务的AI代理场景`, `希望减少系统提示词膨胀和代理漂移的团队`
+
+**效果或数据**: 未提供具体数据
+
+**可信度/风险提示**: 该模式来自网络分享，尚未经过大规模验证；实施效果取决于代理的复杂度和决策笔记的维护质量。
+
+**实用度评分**: Score: 7.0 / 10
+
+**来源链接**: [原文](https://www.reddit.com/r/PromptEngineering/comments/1uormlv/new_ai_pattern_decision_notes_for_llm_agents/)
+
+reddit · r/PromptEngineering · /u/Latter-Hospital-4883 · 7月6日 08:43
+
+**背景**: LLM 代理通常依赖向量数据库或维基来获取知识，但缺乏追踪自身过去判断的机制，导致行为随时间不一致。系统提示词膨胀是指将过多指令塞入提示词中，而代理漂移则指逐渐偏离预期目标。决策笔记旨在提供一种轻量级、人类可读的代理推理记录。
+
+<details><summary>参考链接</summary>
+<ul>
+<li><a href="https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f">llm-wiki · GitHub</a></li>
+<li><a href="https://www.nickjensen.co/posts/agent-how-to-write-architecture-decision-records">AI Agent for Architecture Decision Records | Nick Jensen</a></li>
+<li><a href="https://www.getmaxim.ai/articles/a-comprehensive-guide-to-preventing-ai-agent-drift-over-time/">A Comprehensive Guide to Preventing AI Agent Drift Over Time</a></li>
+
+</ul>
+</details>
+
+**社区讨论**: Reddit 帖子作者分享了该模式，并询问其他人是否构建过类似系统，使用 markdown 还是结构化数据库。讨论可能探讨了简单性与可扩展性之间的权衡，一些用户可能主张采用更结构化的方法，如图数据库。
+
+**标签**: `#使用LLM代理进行自动化工作流的开发者`, `#需要长期稳定执行任务的AI代理场景`, `#希望减少系统提示词膨胀和代理漂移的团队`
 
 </section>
 
 ---
 
 <section class="action-card" data-card-id="reddit:subreddit-rss:t3_1uo6fww" markdown="1">
-<a id="item-2"></a>
+<a id="item-3"></a>
 ## [学术论文人性化改写提示词](https://www.reddit.com/r/PromptEngineering/comments/1uo6fww/the_ultimate_humanizer_prompt_for_students/)
 
 **栏目分类**: `TUTORIAL`
 
-**一句话简介**: 一个用于将 AI 生成的学术文本改写成更像人类学生手笔的提示词模板。
+**一句话简介**: 一个用于将 AI 生成的学术文本改写成更像人类手笔的提示词，通过刻意制造结构不对称和写作摩擦来避免 AI 痕迹。
 
 **具体怎么做**:
-- 将上述SYSTEM INSTRUCTION作为系统提示词，粘贴到支持系统提示词的AI工具（如ChatGPT）中。
-- 将需要改写的AI生成文本作为用户输入提交。
-- AI将按照约束条件（如句长与语义解耦、避免完美结构、加入非对称性等）进行重写。
+- 将以下系统指令复制到ChatGPT或其他AI对话工具中：
+- 指令内容：你是一名分析能力强的大学高年级学生，正在撰写高分课程论文。你的写作在智力上严谨、分析上深刻，但具有真实人类思维在键盘上组织想法时产生的有机结构不对称和“草稿摩擦”。你的文笔干净、清晰、专注，完全避免AI文本生成典型的无菌、优化、均匀平衡的布局。你的任务是彻底重写提供的文本，使其成为人类撰写的草稿。保持绝对的技术准确性，但将句法从语义中解耦，以注入真实、非线性的人类足迹。关键重写约束（违反任何一条即失败）：约束1：解耦结构波动性——不允许句子或段落长度与文本的语义功能匹配。在论文的整个时间线上随机变化写作节奏：独立句子、复杂复合句、片段句、列表、过渡句等。约束2：非对称论点展开——避免对称的论点结构。论点可以突然出现、被质疑、被部分撤回，然后再重新审视。约束3：引入“草稿摩擦”——包括偶尔的措辞调整、冗余、自我纠正或轻微的口语化表达。
+- 将需要改写的AI生成文本粘贴到对话中，AI会按照指令输出人性化版本。
 
-**适合谁/适用场景**: `学生`, `需要提交课程论文的人`, `希望降低AI检测率的人`
+**适合谁/适用场景**: `学生`, `需要提交学术论文的人`, `希望避免AI检测工具的人`
 
 **效果或数据**: 未提供具体数据
 
-**可信度/风险提示**: 提示词效果取决于 AI 模型和原始文本；改写后仍可能被 AI 检测工具识别；过度使用可能导致内容质量下降。
+**可信度/风险提示**: 提示词效果取决于 AI 模型和原始文本质量；过度使用可能导致逻辑混乱；部分学校可能禁止使用 AI 辅助写作。
 
-**实用度评分**: Score: 6.0 / 10
+**实用度评分**: Score: 7.0 / 10
 
 **来源链接**: [原文](https://www.reddit.com/r/PromptEngineering/comments/1uo6fww/the_ultimate_humanizer_prompt_for_students/)
 
 reddit · r/PromptEngineering · /u/True-Yesterday-6274 · 7月5日 16:25
 
-**背景**: AI 检测工具通过分析句子长度均匀性、词汇可预测性和缺乏写作摩擦等文本模式来识别 AI 生成的内容。学生们越来越多地寻求在使用 AI 完成课程作业时绕过这些检测器的方法，这引发了关于学术诚信的伦理问题。
+**背景**: AI 生成的文本通常表现出均匀的句子长度、可预测的过渡和过度使用的流行词，使其容易被 AI 分类器检测到。“写作摩擦”指的是人类写作中的自然不完美之处，如句子长度变化和偶尔别扭的措辞，该提示词旨在模仿这些特征。
 
 <details><summary>参考链接</summary>
 <ul>
-<li><a href="https://phrasly.ai/blog/prompt-to-humanize-ai-text/">The Best Prompts to Humanize AI Text (2026 Guide)</a></li>
 <li><a href="https://docsbot.ai/prompts/education/academic-essay-humanizer">Academic Essay Humanizer - AI Prompt</a></li>
-<li><a href="https://www.gpthumanizer.ai/blog/best-ai-prompts-for-academic-writing-skills-2025">Best AI Prompts for Academic Writing Skills (2026 Guide)</a></li>
+<li><a href="https://phrasly.ai/blog/prompt-to-humanize-ai-text/">The Best Prompts to Humanize AI Text (2026 Guide)</a></li>
+<li><a href="https://aceessay.ai/en/essay-humanizer">Free Essay Humanizer - Bypass AI Detectors & No... - Ace Essay</a></li>
 
 </ul>
 </details>
 
-**标签**: `#学生`, `#需要提交课程论文的人`, `#希望降低AI检测率的人`
+**标签**: `#学生`, `#需要提交学术论文的人`, `#希望避免AI检测工具的人`
 
 </section>
 
 ---
 
-<section class="action-card" data-card-id="reddit:subreddit-rss:t3_1uo3jrl" markdown="1">
-<a id="item-3"></a>
-## [前沿模型审查评判提示词，返回 42 条发现](https://www.reddit.com/r/PromptEngineering/comments/1uo3jrl/a_frontier_model_reviewed_my_judge_prompts_and/)
+<section class="action-card" data-card-id="twitter:tweet:2074019009226322078" markdown="1">
+<a id="item-4"></a>
+## [用好 Claude Code Fable 5 的三个秘诀](https://twitter.com/dotey/status/tweet-2074019009226322078)
 
 **栏目分类**: `TUTORIAL`
 
-**一句话简介**: 一个使用前沿模型自动审查和优化评判提示词的方法，并开源了统一格式的提示词库。
+**一句话简介**: Claude Code 团队成员分享的使用 Fable 5 模型的新工作方式：将模型视为思维伙伴、设定目标并提供验证方法、更大胆地尝试。
 
 **具体怎么做**:
-- 1. 让前沿模型为21种工作类型（设计、代码、写作、研究、动画等）编写评判标准。
-- 2. 创建8个独立上下文副本的模型，其中7个扫描文件，1个审查评判提示词。
-- 3. 收集模型返回的约260项修改建议，包括禁止自身习惯（如默认背景、机器节奏三元组等）。
-- 4. 对于Claude Code，安装为插件（2条命令），添加/frontier命令和两个评判代理。
-- 5. 在claude.ai上，将zip文件作为自定义技能上传。
-- 6. 所有内容为纯文本，也可通过一次粘贴在其他地方运行。
-- 7. 完整收敛模式成本是一次性成本的1.5-9倍（作者估计，最多8次迭代）。
+- 1. 把 Claude 当作思维伙伴：在实施前尽早让 Claude 参与，例如先写一个小的需求规范，让 Claude 就实施方案对你进行“面试提问”，或让它提出多个发展方向并制作 HTML 原型。
+- 2. 提供上下文而非仅约束条件：例如不说“保持简单”，而是说“这个功能是实验，可能一个月后删掉，不要构建丢弃起来会心疼的东西”。
+- 3. 设定目标并提供验证方法：使用 /goal 指令让 Claude 持续工作直至完成，使用 workflows 功能让 Claude 验证其工作。
 
-**适合谁/适用场景**: `提示工程师`, `AI应用开发者`, `需要优化AI评判质量的研究者`, `使用Claude Code或claude.ai的用户`
+**适合谁/适用场景**: `使用 Claude Code 的开发者`, `希望提升 AI 辅助编程效率的程序员`, `需要处理复杂、长时间运行任务的 AI 用户`
 
-**效果或数据**: 作者使用该方法后，模型返回了 42 条发现和约 260 项修改建议，但未提供具体效果提升数据。
+**效果或数据**: 未提供具体数据
 
-**可信度/风险提示**: 该方法依赖前沿模型自身评判，存在自我评判的局限性（模型评判同级别模型效果不如更高级模型）。成本较高，且需要多次迭代。
+**可信度/风险提示**: 该方法基于 Claude Code 团队成员的分享，但具体效果因人而异，需要用户自行尝试和调整。
 
-**实用度评分**: Score: 6.0 / 10
+**实用度评分**: Score: 7.0 / 10
 
-**来源链接**: [原文](https://www.reddit.com/r/PromptEngineering/comments/1uo3jrl/a_frontier_model_reviewed_my_judge_prompts_and/)
+**来源链接**: [原文](https://twitter.com/dotey/status/tweet-2074019009226322078)
 
-reddit · r/PromptEngineering · /u/techforgranted · 7月5日 14:26
+twitter · 宝玉 · 7月6日 06:33
 
-**背景**: 前沿模型是最先进的大型语言模型，能够进行复杂推理和生成。评判提示词是用于评估其他 AI 模型输出的指令，但常包含微妙偏见或模式，降低评估质量。该项目利用前沿模型自我批评并优化这些提示词。
+**背景**: Claude Fable 5 是 Anthropic 在 FrontierBench 上得分最高的模型，擅长长周期推理和陌生工具的使用。Claude Code 是一款集成在终端中的 AI 编程助手。/goal 命令设定一个完成条件，Claude 会持续工作直至达成，无需用户每一步都提示。动态工作流允许 Claude 通过并行子代理执行任务并自行检查工作。
 
 <details><summary>参考链接</summary>
 <ul>
-<li><a href="https://www.nvidia.com/en-us/glossary/frontier-models/">What Are Frontier AI Models and How They Work - NVIDIA</a></li>
-<li><a href="https://code.claude.com/docs/en/skills">Extend Claude with skills - Claude Code Docs</a></li>
-<li><a href="https://namegenhub.com/the-kael-problem-why-every-ai-character-name-sounds-the-same/">The "Kael" Problem: Why Every AI Character Name Sounds the Same (And How to Engineer True Originality) - NameGenHub</a></li>
+<li><a href="https://www.anthropic.com/claude/fable">Claude Fable \ Anthropic</a></li>
+<li><a href="https://code.claude.com/docs/en/goal">Keep Claude working toward a goal - Claude Code Docs</a></li>
+<li><a href="https://claude.com/blog/introducing-dynamic-workflows-in-claude-code">Introducing dynamic workflows | Claude by Anthropic</a></li>
 
 </ul>
 </details>
 
-**标签**: `#提示工程师`, `#AI应用开发者`, `#需要优化AI评判质量的研究者`, `#使用Claude Code或claude.ai的用户`
+**标签**: `#使用 Claude Code 的开发者`, `#希望提升 AI 辅助编程效率的程序员`, `#需要处理复杂、长时间运行任务的 AI 用户`
 
 </section>
 
 ---
 
-<section class="action-card" data-card-id="reddit:subreddit-rss:t3_1unwskd" markdown="1">
-<a id="item-4"></a>
-## [脑暴式提示词：直接跟 AI 聊天](https://www.reddit.com/r/PromptEngineering/comments/1unwskd/you_all_overcomplicate_this_stuff/)
+<section class="action-card" data-card-id="reddit:subreddit-rss:t3_1uoxi5c" markdown="1">
+<a id="item-5"></a>
+## [精简提示词让 AI 输出更佳](https://www.reddit.com/r/PromptEngineering/comments/1uoxi5c/i_stopped_making_my_prompts_longer_and_the/)
 
 **栏目分类**: `PRODUCTIVITY_TIP`
 
-**一句话简介**: 一个简单的提示词技巧：直接以“我不知道怎么描述，先做一次脑暴”开头，让 AI 帮你理清需求。
+**一句话简介**: 一位用户发现，减少提示词中的指令、规则和示例，只保留目标和上下文，AI 输出变得更清晰、更可用。
 
 **具体怎么做**:
-- 1. 以“我不知道怎么描述，先做一次脑暴”开头。
-- 2. 接着用意识流方式写下你的想法和目标，不必担心逻辑或矛盾。
-- 3. 最后加上：“我知道我可能自相矛盾，而且很模糊。请提出澄清性问题，确保我们达成共识。”
-- 4. 如果需要，可以补充：“我不擅长处理大段问题，请保持问题简单，逐步提问。”
+- 移除提示词中多余的指令、规则和示例
+- 只保留核心目标和必要的上下文信息
+- 测试精简后的提示词，观察输出质量变化
 
-**适合谁/适用场景**: `不擅长清晰表达需求的用户`, `有ADHD等注意力分散问题的人`, `任何希望快速启动AI对话的普通人`
+**适合谁/适用场景**: `提示词工程师`, `AI工具使用者`, `希望提升AI输出质量的人`
 
 **效果或数据**: 未提供具体数据
 
-**可信度/风险提示**: 该方法依赖 AI 的澄清能力，不同模型效果可能有差异；对于复杂任务可能需要多轮交互。
+**可信度/风险提示**: 该技巧基于个人经验，效果可能因模型和任务而异，建议用户自行测试。
 
 **实用度评分**: Score: 6.0 / 10
 
-**来源链接**: [原文](https://www.reddit.com/r/PromptEngineering/comments/1unwskd/you_all_overcomplicate_this_stuff/)
+**来源链接**: [原文](https://www.reddit.com/r/PromptEngineering/comments/1uoxi5c/i_stopped_making_my_prompts_longer_and_the/)
 
-reddit · r/PromptEngineering · /u/gabsta84 · 7月5日 08:26
+reddit · r/PromptEngineering · /u/Chemical-Spite-3203 · 7月6日 13:33
 
-**背景**: 提示词工程通常需要精心设计精确指令才能从 AI 模型获得期望输出，这对普通用户来说可能令人生畏。“脑暴”技术利用了模型处理模糊性并提出澄清问题的能力，类似于人类协作者的做法。这种方法符合让 AI 更具对话性和用户友好性的趋势。
+**背景**: 提示词工程通常涉及编写包含明确指令和示例的详细提示词，以引导 AI 行为。然而，过于复杂的提示词可能引入干扰或限制模型的创造力，导致输出不够自然或重复。这一经验表明，极简方法有时可能更有效。
+
+**标签**: `#提示词工程师`, `#AI工具使用者`, `#希望提升AI输出质量的人`
+
+</section>
+
+---
+
+<section class="action-card" data-card-id="reddit:subreddit-rss:t3_1uos4us" markdown="1">
+<a id="item-6"></a>
+## [提示词改动提升 SEO 内容质量](https://www.reddit.com/r/PromptEngineering/comments/1uos4us/one_prompt_change_completely_changed_the_quality/)
+
+**栏目分类**: `TUTORIAL`
+
+**一句话简介**: 通过改变提示词策略，让 AI 先思考主题再写作，从而生成深度更强、编辑更少的 SEO 内容。
+
+**具体怎么做**:
+- 不要直接要求AI“写一篇SEO文章”，而是先让模型思考主题，理解深层概念后再开始写作。
+- 提示词中强调先分析主题的细节、权衡和实际见解，而非仅关注关键词。
+
+**适合谁/适用场景**: `内容创作者`, `SEO从业者`, `使用AI生成文章的写手`
+
+**效果或数据**: 未提供具体数据
+
+**可信度/风险提示**: 该方法基于个人经验，效果可能因主题和模型而异；需要自行测试调整。
+
+**实用度评分**: Score: 6.0 / 10
+
+**来源链接**: [原文](https://www.reddit.com/r/PromptEngineering/comments/1uos4us/one_prompt_change_completely_changed_the_quality/)
+
+reddit · r/PromptEngineering · /u/Comfortable_War2683 · 7月6日 09:13
+
+**背景**: 面向 SEO 的提示词工程涉及编写精确指令，以生成既满足人类可读性又符合搜索引擎要求的内容。像 ChatGPT Search 和 Perplexity 这样的 AI 搜索引擎现在优先考虑展示专业知识并提供简洁答案的内容。
 
 <details><summary>参考链接</summary>
 <ul>
-<li><a href="https://alicialyttle.com/ai-prompt-writing-brain-dump-guide/">How to Turn a Brain Dump Into a Strategic AI Prompt | Alicia ...</a></li>
-<li><a href="https://www.additudemag.com/slideshows/how-to-use-ai-prompts-adhd/">How to Use AI for ADHD: Prompts to Streamline Your Daily Life</a></li>
-<li><a href="https://medium.com/@christianaistudio/3-ai-prompt-strategies-that-actually-help-with-adhd-productivity-125d84b08667">AI Prompts for ADHD Productivity: 3 Strategies for Task Initiation, Focus, and Brain Dump Processing | Medium</a></li>
+<li><a href="https://www.linkedin.com/pulse/prompt-engineering-seo-friendly-content-writing-ultimate-aritra-bose-t0acc">Prompt Engineering for SEO Friendly Content Writing: The Ultimate...</a></li>
+<li><a href="https://www.texta.ai/glossary/ai-search/prompt-engineering-seo">Prompt Engineering for SEO : Definition and Guide | Texta</a></li>
+<li><a href="https://loudscale.com/blog/best-chatgpt-prompts-seo-marketing/">Best ChatGPT Prompts for SEO & Marketing... | LoudScale</a></li>
 
 </ul>
 </details>
 
-**社区讨论**: 该帖子得分为 6.0/10，表明中等程度的认同。评论（未提供）可能呼应了很多人过度复杂化提示词的观点，一些用户分享了自己的简化方法。
+**社区讨论**: 该 Reddit 帖子获得了积极反响，作者指出提示词工程对内容质量的影响比更换 AI 模型更大，并邀请其他人分享自己的提示词。
 
-**标签**: `#不擅长清晰表达需求的用户`, `#有ADHD等注意力分散问题的人`, `#任何希望快速启动AI对话的普通人`
+**标签**: `#内容创作者`, `#SEO从业者`, `#使用AI生成文章的写手`
 
 </section>
 
