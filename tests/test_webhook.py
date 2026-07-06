@@ -769,6 +769,7 @@ class TestWebhookConfigModel:
         assert config.enabled is False
         assert config.url_env is None
         assert config.paid_feishu_url is None
+        assert config.category_feishu == {}
         assert config.request_body is None
         assert config.headers is None
         assert config.delivery == "summary"
@@ -781,6 +782,10 @@ class TestWebhookConfigModel:
             enabled=True,
             url_env="XINXIANXING_WEBHOOK_URL",
             paid_feishu_url="https://example.com/paid",
+            category_feishu={
+                "TUTORIAL": "https://example.com/tutorial",
+                "MONEY_CASE": "",
+            },
             request_body='{"msg_type":"post"}',
             headers="Authorization: Bearer xxx",
             delivery="summary_and_items",
@@ -793,6 +798,8 @@ class TestWebhookConfigModel:
         assert config.enabled is True
         assert config.url_env == "XINXIANXING_WEBHOOK_URL"
         assert config.paid_feishu_url == "https://example.com/paid"
+        assert config.category_feishu["TUTORIAL"] == "https://example.com/tutorial"
+        assert config.category_feishu["MONEY_CASE"] == ""
         assert config.delivery == "summary_and_items"
         assert config.overview_position == "last"
         assert config.platform == "feishu"
@@ -964,6 +971,86 @@ class TestSendDailySummary:
             assert "[效率技巧]" in second_content
             assert "Score 7.0" in second_content
             assert "批量执行" not in second_content
+        del os.environ[_TEST_URL_ENV]
+
+    def test_category_feishu_delivery_sends_only_matching_signal_types(self):
+        """Category Feishu delivery sends each signal type to its own URL only."""
+        os.environ[_TEST_URL_ENV] = _TEST_URL
+        config = WebhookConfig(
+            enabled=True,
+            url_env=_TEST_URL_ENV,
+            category_feishu={
+                "TUTORIAL": "https://example.com/tutorial",
+                "MONEY_CASE": "",
+                "PRODUCTIVITY_TIP": "https://example.com/productivity",
+            },
+            delivery="summary",
+        )
+        notifier = WebhookNotifier(config)
+        summarizer = DailySummarizer()
+
+        tutorial = _make_item(title="教程卡片")
+        tutorial.signal_type = SignalType.TUTORIAL
+        tutorial.intro = "教程简介"
+        money = _make_item(title="赚钱案例卡片", url="https://example.com/money", score=7.5)
+        money.signal_type = SignalType.MONEY_CASE
+        productivity = _make_item(title="效率技巧卡片", url="https://example.com/tip", score=7.0)
+        productivity.signal_type = SignalType.PRODUCTIVITY_TIP
+        news = _make_item(title="新闻卡片", url="https://example.com/news", score=6.5)
+        news.signal_type = SignalType.NEWS
+
+        with (
+            patch.object(notifier, "notify", new_callable=AsyncMock) as mock_notify,
+            patch.object(notifier, "notify_paid_feishu", new_callable=AsyncMock) as mock_paid,
+            patch.object(notifier, "notify_category_feishu", new_callable=AsyncMock) as mock_category,
+        ):
+            _run_async(
+                notifier.send_daily_summary(
+                    summary="# 公开摘要",
+                    important_items=[tutorial, money, productivity, news],
+                    all_items_count=20,
+                    date="2026-04-24",
+                    lang="zh",
+                    summarizer=summarizer,
+                )
+            )
+
+            mock_notify.assert_called_once()
+            mock_paid.assert_not_called()
+            assert mock_category.call_count == 2
+
+            first_signal, first_body = mock_category.call_args_list[0][0]
+            first_content = first_body["card"]["body"]["elements"][0]["content"]
+            assert first_signal is SignalType.TUTORIAL
+            assert "教程卡片" in first_content
+            assert "赚钱案例卡片" not in first_content
+            assert "效率技巧卡片" not in first_content
+            assert "新闻卡片" not in first_content
+            assert "https://xinxianxing.com/2026/04/24/summary-zh.html#item-1" in first_content
+
+            second_signal, second_body = mock_category.call_args_list[1][0]
+            second_content = second_body["card"]["body"]["elements"][0]["content"]
+            assert second_signal is SignalType.PRODUCTIVITY_TIP
+            assert "效率技巧卡片" in second_content
+            assert "教程卡片" not in second_content
+            assert "赚钱案例卡片" not in second_content
+            assert "新闻卡片" not in second_content
+            assert "https://xinxianxing.com/2026/04/24/summary-zh.html#item-3" in second_content
+        del os.environ[_TEST_URL_ENV]
+
+    def test_category_feishu_unset_env_placeholder_is_skipped(self):
+        """Unset ${ENV} category URLs are treated as optional and skipped."""
+        os.environ[_TEST_URL_ENV] = _TEST_URL
+        config = WebhookConfig(
+            enabled=True,
+            url_env=_TEST_URL_ENV,
+            category_feishu={
+                "TUTORIAL": "${XINXIANXING_TUTORIAL_FEISHU_URL}",
+                "PRODUCTIVITY_TIP": " ",
+            },
+        )
+        notifier = WebhookNotifier(config)
+        assert notifier.category_feishu_urls == {}
         del os.environ[_TEST_URL_ENV]
 
     def test_summary_delivery_zh_lang(self):

@@ -23,6 +23,7 @@ _PLACEHOLDER_RE = re.compile(r"#\{(\w+)(\?\w+=[^}]+)?\}")
 _SENSITIVE_HEADER_RE = re.compile(
     r"(authorization|token|secret|signature|key|password)", re.IGNORECASE
 )
+_UNRESOLVED_ENV_REF_RE = re.compile(r"^\$\{[A-Za-z_][A-Za-z0-9_]*\}$")
 _DEFAULT_SITE_BASE_URL = "https://xinxianxing.com"
 _SIGNAL_TYPE_LABELS_ZH = {
     SignalType.TUTORIAL: "教程",
@@ -224,6 +225,14 @@ def _format_score(value: object) -> str:
         return str(value)
 
 
+def _is_blank_or_unresolved_env_ref(value: str | None) -> bool:
+    """Return whether an optional URL value should be treated as unset."""
+    if value is None:
+        return True
+    text = value.strip()
+    return not text or bool(_UNRESOLVED_ENV_REF_RE.fullmatch(text))
+
+
 def _site_config_value(key: str) -> str:
     """Read a simple scalar key from docs/_config.yml without a YAML dependency."""
     config_path = Path("docs/_config.yml")
@@ -371,8 +380,10 @@ class WebhookNotifier:
             self.console = console
         self.url = None
         self.paid_feishu_url = None
+        self.category_feishu_urls: dict[SignalType, str] = {}
         self._validate_config()  # sets self.url or raises ValueError
         self._validate_paid_feishu_url()
+        self._validate_category_feishu_urls()
 
     def _item_page_url(self, date: str, lang: str, index: int) -> str:
         """Build this notifier's configured public page URL for one card."""
@@ -449,9 +460,10 @@ class WebhookNotifier:
         Missing/blank paid URLs intentionally skip the paid channel without
         changing the public webhook behavior.
         """
-        raw_url = (getattr(self.config, "paid_feishu_url", None) or "").strip()
-        if not raw_url:
+        raw_url = getattr(self.config, "paid_feishu_url", None)
+        if _is_blank_or_unresolved_env_ref(raw_url):
             return
+        raw_url = raw_url.strip()
 
         try:
             self.paid_feishu_url = self._validate_url(
@@ -464,6 +476,46 @@ class WebhookNotifier:
                 "[yellow]Paid Feishu webhook URL is invalid; "
                 f"skipping paid notifications: {exc}[/yellow]"
             )
+
+    def _validate_category_feishu_urls(self) -> None:
+        """Validate optional Feishu webhook URLs keyed by signal type."""
+        raw_mapping = getattr(self.config, "category_feishu", None) or {}
+        for raw_signal, raw_url in raw_mapping.items():
+            if _is_blank_or_unresolved_env_ref(raw_url):
+                continue
+
+            try:
+                signal = (
+                    raw_signal
+                    if isinstance(raw_signal, SignalType)
+                    else SignalType(str(raw_signal).upper())
+                )
+            except ValueError:
+                logger.warning(
+                    "Ignoring category_feishu entry with unknown signal type: %s",
+                    raw_signal,
+                )
+                self.console.print(
+                    "[yellow]Category Feishu webhook signal type is unknown; "
+                    f"skipping {raw_signal!r}.[/yellow]"
+                )
+                continue
+
+            try:
+                self.category_feishu_urls[signal] = self._validate_url(
+                    str(raw_url),
+                    source_label=f"webhook.category_feishu.{signal.value}",
+                )
+            except ValueError as exc:
+                logger.warning(
+                    "Invalid category_feishu URL for %s; skipping category webhook: %s",
+                    signal.value,
+                    exc,
+                )
+                self.console.print(
+                    "[yellow]Category Feishu webhook URL is invalid; "
+                    f"skipping {signal.value}: {exc}[/yellow]"
+                )
 
     def _render_request_components(
         self, variables: dict
@@ -548,18 +600,21 @@ class WebhookNotifier:
         """Return localized item title for webhook snippets."""
         return _safe_markdown_label(item.metadata.get(f"title_{lang}") or item.title, "Untitled")
 
+    def _item_signal_type(self, item: ContentItem) -> SignalType | None:
+        """Return the normalized signal type for an item."""
+        raw_signal = item.signal_type or item.metadata.get("signal_type")
+        if isinstance(raw_signal, SignalType):
+            return raw_signal
+        if raw_signal:
+            try:
+                return SignalType(str(raw_signal).upper())
+            except ValueError:
+                return None
+        return None
+
     def _item_signal_label(self, item: ContentItem, lang: str) -> str:
         """Return a short category label for Feishu snippets."""
-        raw_signal = item.signal_type or item.metadata.get("signal_type")
-        signal: SignalType | None = None
-        if isinstance(raw_signal, SignalType):
-            signal = raw_signal
-        elif raw_signal:
-            try:
-                signal = SignalType(str(raw_signal).upper())
-            except ValueError:
-                signal = None
-
+        signal = self._item_signal_type(item)
         if lang == "zh":
             return _SIGNAL_TYPE_LABELS_ZH.get(signal, "精选") if signal else "精选"
         return _SIGNAL_TYPE_LABELS_EN.get(signal, "Pick") if signal else "Pick"
@@ -725,7 +780,7 @@ class WebhookNotifier:
         *,
         template: str = "green",
     ) -> dict[str, Any]:
-        """Build a Feishu interactive card for paid-user delivery."""
+        """Build a Feishu interactive card for direct bot delivery."""
         return {
             "msg_type": "interactive",
             "card": {
@@ -816,6 +871,97 @@ class WebhookNotifier:
                     message_title[:80],
                     item_content,
                     template="blue",
+                )
+            )
+
+        return messages
+
+    def _build_category_feishu_summary(
+        self,
+        signal: SignalType,
+        indexed_items: list[tuple[int, ContentItem]],
+        date: str,
+        lang: str,
+    ) -> str:
+        """Build one category-only Feishu card body."""
+        label = (
+            _SIGNAL_TYPE_LABELS_ZH.get(signal, signal.value)
+            if lang == "zh"
+            else _SIGNAL_TYPE_LABELS_EN.get(signal, signal.value)
+        )
+        link_label = "查看完整内容" if lang == "zh" else "Read full card"
+        if lang == "zh":
+            lines = [
+                f"# 信先行 · {label} - {date}",
+                "",
+                f"{len(indexed_items)} 条{label}内容，点击链接查看完整页面。",
+            ]
+        else:
+            lines = [
+                f"# Xinxianxing · {label} - {date}",
+                "",
+                f"{len(indexed_items)} {label} items. Open links for the full pages.",
+            ]
+
+        for display_index, (page_index, item) in enumerate(indexed_items, start=1):
+            title = self._item_title(item, lang)
+            score = self._item_score_label(item)
+            link = self._item_page_url(date, lang, page_index)
+            lines.extend(
+                [
+                    "",
+                    f"{display_index}. **[{label}] {title}**",
+                    f"Score {score} · [{link_label}]({link})",
+                ]
+            )
+        return "\n".join(lines)
+
+    def build_category_feishu_messages(
+        self,
+        important_items: List[ContentItem],
+        date: str,
+        lang: str,
+    ) -> list[tuple[SignalType, dict[str, Any]]]:
+        """Build category-only Feishu messages for configured signal types."""
+        if not self.category_feishu_urls:
+            return []
+
+        grouped_items: dict[SignalType, list[tuple[int, ContentItem]]] = {}
+        for page_index, item in enumerate(important_items, start=1):
+            signal = self._item_signal_type(item)
+            if signal not in self.category_feishu_urls:
+                continue
+            grouped_items.setdefault(signal, []).append((page_index, item))
+
+        messages: list[tuple[SignalType, dict[str, Any]]] = []
+        for signal in self.category_feishu_urls:
+            indexed_items = grouped_items.get(signal, [])
+            if not indexed_items:
+                continue
+            label = (
+                _SIGNAL_TYPE_LABELS_ZH.get(signal, signal.value)
+                if lang == "zh"
+                else _SIGNAL_TYPE_LABELS_EN.get(signal, signal.value)
+            )
+            title = (
+                f"信先行 {date} {label}"
+                if lang == "zh"
+                else f"Xinxianxing {date} {label}"
+            )
+            content = self._build_category_feishu_summary(
+                signal=signal,
+                indexed_items=indexed_items,
+                date=date,
+                lang=lang,
+            )
+            messages.append(
+                (
+                    signal,
+                    self._build_paid_feishu_card(
+                        title[:80],
+                        content,
+                        template="blue",
+                    ),
                 )
             )
 
@@ -1013,12 +1159,16 @@ class WebhookNotifier:
             )
             logger.error("Webhook unexpected error: URL=%s, type=%s, error=%s", safe_url, type(e).__name__, e)
 
-    async def notify_paid_feishu(self, body: dict[str, Any]) -> None:
-        """Send one paid-channel Feishu message."""
-        if not self.config.enabled or not self.paid_feishu_url:
+    async def _post_direct_feishu(
+        self,
+        request_url: str | None,
+        body: dict[str, Any],
+        channel_label: str,
+    ) -> None:
+        """Send one pre-rendered Feishu card to a direct bot URL."""
+        if not self.config.enabled or not request_url:
             return
 
-        request_url = self.paid_feishu_url
         safe_url = redact_url(request_url)
         body_content = json.dumps(body, ensure_ascii=False)
         headers = {"Content-Type": "application/json"}
@@ -1034,24 +1184,39 @@ class WebhookNotifier:
             self._handle_response_status(response, safe_url)
 
         except httpx.InvalidURL as e:
-            self.console.print(f"[red]Paid Feishu webhook URL is invalid: {e}[/red]")
-            logger.error("Paid Feishu webhook URL invalid: %s", e)
+            self.console.print(f"[red]{channel_label} Feishu webhook URL is invalid: {e}[/red]")
+            logger.error("%s Feishu webhook URL invalid: %s", channel_label, e)
         except httpx.ConnectError as e:
-            self.console.print(f"[red]Paid Feishu webhook connection failed: {e}[/red]")
-            logger.error("Paid Feishu webhook connection failed: URL=%s, error=%s", safe_url, e)
+            self.console.print(f"[red]{channel_label} Feishu webhook connection failed: {e}[/red]")
+            logger.error(
+                "%s Feishu webhook connection failed: URL=%s, error=%s",
+                channel_label,
+                safe_url,
+                e,
+            )
         except httpx.TimeoutException as e:
-            self.console.print(f"[red]Paid Feishu webhook request timed out: {e}[/red]")
-            logger.error("Paid Feishu webhook timeout: URL=%s, error=%s", safe_url, e)
+            self.console.print(f"[red]{channel_label} Feishu webhook request timed out: {e}[/red]")
+            logger.error("%s Feishu webhook timeout: URL=%s, error=%s", channel_label, safe_url, e)
         except Exception as e:
             self.console.print(
-                f"[red]Paid Feishu webhook failed unexpectedly: {type(e).__name__}: {e}[/red]"
+                f"[red]{channel_label} Feishu webhook failed unexpectedly: {type(e).__name__}: {e}[/red]"
             )
             logger.error(
-                "Paid Feishu webhook unexpected error: URL=%s, type=%s, error=%s",
+                "%s Feishu webhook unexpected error: URL=%s, type=%s, error=%s",
+                channel_label,
                 safe_url,
                 type(e).__name__,
                 e,
             )
+
+    async def notify_paid_feishu(self, body: dict[str, Any]) -> None:
+        """Send one paid-channel Feishu message."""
+        await self._post_direct_feishu(self.paid_feishu_url, body, "Paid")
+
+    async def notify_category_feishu(self, signal: SignalType, body: dict[str, Any]) -> None:
+        """Send one category-channel Feishu message."""
+        request_url = self.category_feishu_urls.get(signal)
+        await self._post_direct_feishu(request_url, body, f"Category {signal.value}")
 
     def _check_body_error_code(self, body: str) -> Optional[str]:
         """Check if a 2xx response body contains a platform-specific error code.
@@ -1207,6 +1372,16 @@ class WebhookNotifier:
             self.console.print(f"🔐 Sending {lang.upper()} paid Feishu webhook notification...")
             for message in paid_messages:
                 await self.notify_paid_feishu(message)
+
+        category_messages = self.build_category_feishu_messages(
+            important_items=important_items,
+            date=date,
+            lang=lang,
+        )
+        if category_messages:
+            self.console.print(f"🗂️ Sending {lang.upper()} category Feishu webhook notifications...")
+            for signal, message in category_messages:
+                await self.notify_category_feishu(signal, message)
 
     async def send_failure(
         self,

@@ -319,8 +319,11 @@ class WebhookConfig(BaseModel):
         None  # Environment variable name containing the webhook URL
     )
     paid_feishu_url: Optional[str] = (
-        None  # Optional direct Feishu webhook URL for paid-user full Action Cards
+        None  # Optional direct Feishu webhook URL for paid-user cards
     )
+    category_feishu: Dict[str, Optional[str]] = Field(
+        default_factory=dict
+    )  # Optional Feishu webhook URLs keyed by SignalType, e.g. TUTORIAL
     request_body: Optional[Union[str, dict, list]] = (
         None  # POST body: real JSON object or string with #{key} placeholders; if empty, will use GET
     )
