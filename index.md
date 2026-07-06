@@ -1,0 +1,92 @@
+---
+layout: default
+title: 今日AI精选
+---
+
+<div id="lang-zh" class="lang-section" markdown="1">
+
+<section class="home-hero">
+  <div class="hero-copy">
+    <p class="eyebrow">AI教程 / 赚钱案例 / 效率技巧</p>
+    <h1>信先行</h1>
+    <p>每天筛掉噪声，只留下普通人值得学、值得试、值得收藏的 AI 行动卡片。</p>
+    <div class="hero-actions">
+      <a class="primary-action" href="#latest-zh">查看最新精选</a>
+      <a class="secondary-action" href="/feed-zh.xml">订阅 RSS</a>
+    </div>
+  </div>
+  <img class="hero-visual" src="/assets/brand-sunrise.svg" alt="信先行品牌视觉">
+</section>
+
+<section class="focus-grid" aria-label="内容栏目">
+  <article>
+    <span>教程</span>
+    <h2>照着做</h2>
+    <p>把复杂工具、提示词和工作流拆成可执行步骤，减少自己摸索的时间。</p>
+  </article>
+  <article>
+    <span>案例</span>
+    <h2>看清怎么赚钱</h2>
+    <p>记录可验证的 AI 变现案例，也标出数据缺口、夸大风险和幸存者偏差。</p>
+  </article>
+  <article>
+    <span>效率</span>
+    <h2>马上试</h2>
+    <p>优先收集能节省时间、改善产出、适合个人和小团队快速尝试的方法。</p>
+  </article>
+</section>
+
+<section class="latest-section" id="latest-zh">
+  <div class="section-heading">
+    <p class="eyebrow">LATEST</p>
+    <h2>最新精选</h2>
+    <p>每篇只保留审核后发布的内容，草稿不会出现在这里。</p>
+  </div>
+  <div class="issue-grid" data-post-list="zh"></div>
+</section>
+
+</div>
+
+<div id="lang-en" class="lang-section" markdown="1">
+
+<section class="home-hero">
+  <div class="hero-copy">
+    <p class="eyebrow">AI tutorials / monetization cases / productivity tips</p>
+    <h1>Xinxianxing</h1>
+    <p>Daily AI Action Cards for people who want practical things to learn, try, and save.</p>
+    <div class="hero-actions">
+      <a class="primary-action" href="#latest-en">Read latest picks</a>
+      <a class="secondary-action" href="/feed-en.xml">Subscribe RSS</a>
+    </div>
+  </div>
+  <img class="hero-visual" src="/assets/brand-sunrise.svg" alt="Xinxianxing brand visual">
+</section>
+
+<section class="focus-grid" aria-label="Content categories">
+  <article>
+    <span>Tutorial</span>
+    <h2>Follow the steps</h2>
+    <p>Tools, prompts, and workflows are rewritten into practical steps you can test quickly.</p>
+  </article>
+  <article>
+    <span>Case</span>
+    <h2>See the business angle</h2>
+    <p>Monetization stories are kept grounded, with missing data and bias called out clearly.</p>
+  </article>
+  <article>
+    <span>Productivity</span>
+    <h2>Try it today</h2>
+    <p>Short, useful methods for individuals and small teams who want better output with less friction.</p>
+  </article>
+</section>
+
+<section class="latest-section" id="latest-en">
+  <div class="section-heading">
+    <p class="eyebrow">LATEST</p>
+    <h2>Latest Picks</h2>
+    <p>Only reviewed and published issues appear here. Drafts stay private.</p>
+  </div>
+  <div class="issue-grid" data-post-list="en"></div>
+</section>
+
+</div>
