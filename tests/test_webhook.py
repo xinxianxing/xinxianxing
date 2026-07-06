@@ -854,7 +854,9 @@ class TestSendDailySummary:
             assert vars["message_kind"] == "summary"
             assert vars["message_title"] == "Xinxianxing 2026-04-24 Picks"
             assert "Test Item" in vars["summary"]
-            assert "AI summary" in vars["summary"]
+            assert "[Pick]" in vars["summary"]
+            assert "Score 8.0" in vars["summary"]
+            assert "AI summary" not in vars["summary"]
             assert "https://xinxianxing.com/2026/04/24/summary-en.html#item-1" in vars["summary"]
             assert "Test summary" not in vars["summary"]
             assert vars["important_items"] == 1
@@ -896,7 +898,7 @@ class TestSendDailySummary:
         del os.environ[_TEST_URL_ENV]
 
     def test_paid_feishu_delivery_sends_concise_action_cards(self):
-        """Paid Feishu delivery sends concise cards with limited how-to points."""
+        """Paid Feishu delivery sends title-focused cards with site links."""
         os.environ[_TEST_URL_ENV] = _TEST_URL
         config = WebhookConfig(
             enabled=True,
@@ -941,23 +943,27 @@ class TestSendDailySummary:
 
             overview_body = mock_paid.call_args_list[0][0][0]
             overview_content = overview_body["card"]["body"]["elements"][0]["content"]
-            assert "2 条达到推送标准" in overview_content
+            assert "2 条达标" in overview_content
             assert "实用度 >= 6" in overview_content
-            assert "站内完整内容" in overview_content
+            assert "点链接看完整内容" in overview_content
 
             first_card = mock_paid.call_args_list[1][0][0]
             first_content = first_card["card"]["body"]["elements"][0]["content"]
             assert "精选公开卡片" in first_content
-            assert "一句话简介" in first_content
-            assert "具体怎么做" in first_content
-            assert "打开工具" in first_content
+            assert "[教程]" in first_content
+            assert "一个教程技巧" in first_content
+            assert "Score 8.0" in first_content
+            assert "具体怎么做" not in first_content
+            assert "打开工具" not in first_content
             assert "适合谁" not in first_content
             assert "https://xinxianxing.com/2026/04/24/summary-zh.html#item-1" in first_content
 
             second_card = mock_paid.call_args_list[2][0][0]
             second_content = second_card["card"]["body"]["elements"][0]["content"]
             assert "付费额外卡片" in second_content
-            assert "批量执行" in second_content
+            assert "[效率技巧]" in second_content
+            assert "Score 7.0" in second_content
+            assert "批量执行" not in second_content
         del os.environ[_TEST_URL_ENV]
 
     def test_summary_delivery_zh_lang(self):

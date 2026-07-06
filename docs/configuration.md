@@ -670,7 +670,7 @@ When `delivery` is `summary_and_items`, item messages also include:
 
 For webhook delivery, 信先行 flattens HTML disclosure blocks such as `<details><summary>...</summary>` in `#{summary}` into plain Markdown link lists. This makes the generated summary easier to render in chat products. Saved Markdown files, GitHub Pages, and email content are unchanged.
 
-When `paid_feishu_url` is configured, 信先行 also sends a separate paid-channel Feishu card after the public webhook. The public webhook sends a compact card list with title, one-line intro, and the site link for each selected item. The paid channel receives all score-qualified Action Cards for the day, but still keeps the Feishu message concise: title, one-line intro, the first one or two `具体怎么做` points, and a link to the full site content. If the URL is blank or invalid, paid delivery is skipped and the public webhook continues normally.
+When `paid_feishu_url` is configured, 信先行 also sends a separate paid-channel Feishu card after the public webhook. The public webhook sends only the title, category, score, and site link for each selected item. The paid channel receives all score-qualified items for the day, but still keeps the Feishu message concise: title, category, score, one short intro, and a link to the full site content. If the URL is blank or invalid, paid delivery is skipped and the public webhook continues normally.
 
 Use `#{key?limit=N&split=DELIM}` to truncate long values by splitting on `DELIM` and keeping segments until the total character count reaches `N`.
 
@@ -713,7 +713,7 @@ To keep the group chat compact while still allowing readers to browse the full b
 }
 ```
 
-With this layout, 信先行 sends one interactive card containing the overview and one collapsed panel per selected item. Each panel can be expanded in Feishu to read the full item detail. The regular `request_body` template is ignored for this rendered card.
+With this layout, 信先行 sends one interactive card containing the overview and one collapsed panel per selected item. Each panel keeps the group chat compact with the item title, category, score, and full-content link. The regular `request_body` template is ignored for this rendered card.
 
 ```json
 {

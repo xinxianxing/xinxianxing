@@ -12,7 +12,7 @@ from urllib.parse import urlparse
 import httpx
 
 from ..ai.markdown_utils import clean_app_summary_markdown
-from ..models import ContentItem, WebhookConfig
+from ..models import ContentItem, SignalType, WebhookConfig
 from ..ai.summarizer import DailySummarizer
 
 logger = logging.getLogger(__name__)
@@ -24,6 +24,30 @@ _SENSITIVE_HEADER_RE = re.compile(
     r"(authorization|token|secret|signature|key|password)", re.IGNORECASE
 )
 _DEFAULT_SITE_BASE_URL = "https://xinxianxing.com"
+_SIGNAL_TYPE_LABELS_ZH = {
+    SignalType.TUTORIAL: "教程",
+    SignalType.MONEY_CASE: "赚钱案例",
+    SignalType.PRODUCTIVITY_TIP: "效率技巧",
+    SignalType.NEWS: "新闻",
+    SignalType.TOOL: "工具",
+    SignalType.TREND: "趋势",
+    SignalType.CASE: "案例",
+    SignalType.DEMAND: "需求",
+    SignalType.POLICY: "政策",
+    SignalType.RESEARCH: "研究",
+}
+_SIGNAL_TYPE_LABELS_EN = {
+    SignalType.TUTORIAL: "Tutorial",
+    SignalType.MONEY_CASE: "Money Case",
+    SignalType.PRODUCTIVITY_TIP: "Productivity Tip",
+    SignalType.NEWS: "News",
+    SignalType.TOOL: "Tool",
+    SignalType.TREND: "Trend",
+    SignalType.CASE: "Case",
+    SignalType.DEMAND: "Demand",
+    SignalType.POLICY: "Policy",
+    SignalType.RESEARCH: "Research",
+}
 
 
 def _truncate(value: str, limit: int, split: str) -> str:
@@ -188,6 +212,16 @@ def _clip_text(value: object, limit: int) -> str:
     if len(text) <= limit:
         return text
     return text[: max(limit - 3, 0)].rstrip() + "..."
+
+
+def _format_score(value: object) -> str:
+    """Format a score for compact Feishu snippets."""
+    if value is None or value == "":
+        return "?"
+    try:
+        return f"{float(value):.1f}"
+    except (TypeError, ValueError):
+        return str(value)
 
 
 def _site_config_value(key: str) -> str:
@@ -484,7 +518,7 @@ class WebhookNotifier:
             return (
                 f"# 信先行实用卡片 - {date}\n\n"
                 f"> 从 {all_items_count} 条内容中筛选出 {item_count} 条教程/案例/技巧。\n\n"
-                "点击下方链接即可到站内查看完整 Action Card。"
+                "点击下方链接即可到站内查看完整内容页面。"
             )
 
         if item_count == 0:
@@ -496,7 +530,7 @@ class WebhookNotifier:
         return (
             f"# Xinxianxing Practical Cards - {date}\n\n"
             f"> Selected {item_count} tutorial/case/tip cards from {all_items_count} fetched items.\n\n"
-            "Open the links below to read the full Action Cards on the site."
+            "Open the links below to read the full pages on the site."
         )
 
     def _item_intro(self, item: ContentItem) -> str:
@@ -514,10 +548,31 @@ class WebhookNotifier:
         """Return localized item title for webhook snippets."""
         return _safe_markdown_label(item.metadata.get(f"title_{lang}") or item.title, "Untitled")
 
-    def _item_how_to_points(self, item: ContentItem, max_points: int = 2) -> list[str]:
-        """Return the first few actionable points for the paid Feishu snippet."""
-        points = item.how_to or item.suggested_actions or item.opportunities or []
-        return [_clean_markdown_text(point) for point in points[:max_points] if _clean_markdown_text(point)]
+    def _item_signal_label(self, item: ContentItem, lang: str) -> str:
+        """Return a short category label for Feishu snippets."""
+        raw_signal = item.signal_type or item.metadata.get("signal_type")
+        signal: SignalType | None = None
+        if isinstance(raw_signal, SignalType):
+            signal = raw_signal
+        elif raw_signal:
+            try:
+                signal = SignalType(str(raw_signal).upper())
+            except ValueError:
+                signal = None
+
+        if lang == "zh":
+            return _SIGNAL_TYPE_LABELS_ZH.get(signal, "精选") if signal else "精选"
+        return _SIGNAL_TYPE_LABELS_EN.get(signal, "Pick") if signal else "Pick"
+
+    def _item_score_label(self, item: ContentItem) -> str:
+        """Return the best available score for webhook snippets."""
+        return _format_score(
+            item.utility_score
+            if item.utility_score is not None
+            else item.score
+            if item.score is not None
+            else item.ai_score
+        )
 
     def _build_public_digest_summary(
         self,
@@ -526,7 +581,7 @@ class WebhookNotifier:
         date: str,
         lang: str,
     ) -> str:
-        """Build compact public webhook content: title, intro, and site link."""
+        """Build ultra-compact public webhook content: tag, title, score, and link."""
         if lang == "zh":
             lines: list[str] = []
             if not important_items:
@@ -540,15 +595,15 @@ class WebhookNotifier:
 
         for index, item in enumerate(important_items, start=1):
             title = self._item_title(item, lang)
-            intro = _clip_text(self._item_intro(item), 120)
+            category = self._item_signal_label(item, lang)
+            score = self._item_score_label(item)
             link = self._item_page_url(date, lang, index)
             if lines:
                 lines.append("")
             lines.extend(
                 [
-                    f"**{index}. {title}**",
-                    f"{intro}",
-                    f"[{link_label}]({link})",
+                    f"{index}. **[{category}] {title}**",
+                    f"Score {score} · [{link_label}]({link})",
                 ]
             )
         return "\n".join(lines)
@@ -561,20 +616,19 @@ class WebhookNotifier:
         index: int,
         total: int,
     ) -> str:
-        """Build a compact one-item public webhook message."""
+        """Build an ultra-compact one-item public webhook message."""
         title = self._item_title(item, lang)
-        intro = _clip_text(self._item_intro(item), 140)
+        category = self._item_signal_label(item, lang)
+        score = self._item_score_label(item)
         link = self._item_page_url(date, lang, index)
         if lang == "zh":
             return (
-                f"**{title}**\n\n"
-                f"{intro}\n\n"
-                f"[查看完整内容]({link})"
+                f"**[{category}] {title}**\n\n"
+                f"Score {score} · [查看完整内容]({link})"
             )
         return (
-            f"**{title}**\n\n"
-            f"{intro}\n\n"
-            f"[Read full card]({link})"
+            f"**[{category}] {title}**\n\n"
+            f"Score {score} · [Read full card]({link})"
         )
 
     def _build_paid_item_summary(
@@ -585,33 +639,24 @@ class WebhookNotifier:
         index: int,
         total: int,
     ) -> str:
-        """Build a compact paid-channel item with up to two how-to bullets."""
+        """Build a compact paid-channel item with one short intro."""
         title = self._item_title(item, lang)
-        intro = _clip_text(self._item_intro(item), 140)
+        category = self._item_signal_label(item, lang)
+        score = self._item_score_label(item)
+        intro = _clip_text(self._item_intro(item), 40)
         link = self._item_page_url(date, lang, index)
-        points = self._item_how_to_points(item, max_points=2)
         if lang == "zh":
-            lines = [
-                f"**{title}**",
-                "",
-                f"**一句话简介**: {intro}",
-            ]
-            if points:
-                lines.extend(["", "**具体怎么做**:"])
-                lines.extend(f"- {_clip_text(point, 90)}" for point in points)
-            lines.extend(["", f"[查看完整内容]({link})"])
-            return "\n".join(lines)
+            return (
+                f"**[{category}] {title}**\n\n"
+                f"{intro}\n\n"
+                f"Score {score} · [查看完整内容]({link})"
+            )
 
-        lines = [
-            f"**{title}**",
-            "",
-            f"**One-Line Intro**: {intro}",
-        ]
-        if points:
-            lines.extend(["", "**How To Do It**:"])
-            lines.extend(f"- {_clip_text(point, 90)}" for point in points)
-        lines.extend(["", f"[Read full card]({link})"])
-        return "\n".join(lines)
+        return (
+            f"**[{category}] {title}**\n\n"
+            f"{intro}\n\n"
+            f"Score {score} · [Read full card]({link})"
+        )
 
     def _build_feishu_collapsible_body(
         self,
@@ -732,18 +777,16 @@ class WebhookNotifier:
 
         if lang == "zh":
             overview = (
-                f"# 信先行付费精选 Action Cards - {date}\n\n"
-                f"> 今日共抓取 {all_items_count} 条内容，"
-                f"{len(sorted_items)} 条达到推送标准（{threshold_text}）。\n\n"
-                "下面按实用度评分从高到低发送精简卡片；点击链接可查看站内完整内容。"
+                f"# 信先行付费精选 - {date}\n\n"
+                f"{len(sorted_items)} 条达标（{threshold_text}），"
+                "按实用度排序。点链接看完整内容。"
             )
             overview_title = f"信先行付费精选卡片 - {date}"
         else:
             overview = (
-                f"# Xinxianxing Paid Selected Action Cards - {date}\n\n"
-                f"> Fetched {all_items_count} items. "
-                f"{len(sorted_items)} met the paid delivery threshold ({threshold_text}).\n\n"
-                "Concise cards are sent in score order. Open each link to read the full site version."
+                f"# Xinxianxing Paid Picks - {date}\n\n"
+                f"{len(sorted_items)} cards met {threshold_text}, sorted by utility. "
+                "Open links for the full version."
             )
             overview_title = f"Xinxianxing Paid Cards - {date}"
 
@@ -1130,7 +1173,7 @@ class WebhookNotifier:
             date: Date string (YYYY-MM-DD)
             lang: Language code ("en" or "zh")
             summarizer: DailySummarizer instance for generating webhook overviews
-            paid_items: All score-qualified items for paid-user full-card delivery
+            paid_items: All score-qualified items for paid-user concise delivery
             score_threshold: Score threshold used to select paid_items
         """
         messages = self.build_daily_summary_messages(
