@@ -1053,6 +1053,42 @@ class TestSendDailySummary:
         assert notifier.category_feishu_urls == {}
         del os.environ[_TEST_URL_ENV]
 
+    def test_category_feishu_ai_monetization_alias_maps_to_money_case(self):
+        """AI_MONETIZATION config key delivers MONEY_CASE cards with product-facing labels."""
+        os.environ[_TEST_URL_ENV] = _TEST_URL
+        config = WebhookConfig(
+            enabled=True,
+            url_env=_TEST_URL_ENV,
+            category_feishu={
+                "AI_MONETIZATION": "https://example.com/monetization",
+            },
+        )
+        notifier = WebhookNotifier(config)
+        assert notifier.category_feishu_urls == {
+            SignalType.MONEY_CASE: "https://example.com/monetization"
+        }
+
+        money = _make_item(title="AI变现机会", url="https://example.com/money", score=7.5)
+        money.signal_type = SignalType.MONEY_CASE
+        tutorial = _make_item(title="教程卡片", url="https://example.com/tutorial", score=8.0)
+        tutorial.signal_type = SignalType.TUTORIAL
+
+        messages = notifier.build_category_feishu_messages(
+            important_items=[tutorial, money],
+            date="2026-04-24",
+            lang="zh",
+        )
+
+        assert len(messages) == 1
+        signal, body = messages[0]
+        content = body["card"]["body"]["elements"][0]["content"]
+        assert signal is SignalType.MONEY_CASE
+        assert "信先行 · AI变现 - 2026-04-24" in content
+        assert "[AI变现] AI变现机会" in content
+        assert "教程卡片" not in content
+        assert "https://xinxianxing.com/2026/04/24/summary-zh.html#item-2" in content
+        del os.environ[_TEST_URL_ENV]
+
     def test_summary_delivery_zh_lang(self):
         """Chinese lang uses '今日精选' in message_title."""
         os.environ[_TEST_URL_ENV] = _TEST_URL

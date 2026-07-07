@@ -7,7 +7,7 @@ title: 今日AI精选
 
 <section class="home-hero">
   <div class="hero-copy">
-    <p class="eyebrow">AI教程 / 赚钱案例 / 效率技巧</p>
+    <p class="eyebrow">AI教程 / AI变现 / 效率技巧</p>
     <h1>信先行</h1>
     <p>每天筛掉噪声，只留下普通人值得学、值得试、值得收藏的 AI 行动卡片。</p>
     <div class="hero-actions">
@@ -23,10 +23,10 @@ title: 今日AI精选
   <div class="section-heading">
     <p class="eyebrow">TUTORIAL LIBRARY</p>
     <h2>教程库</h2>
-    <p>人工精选的深度教程，按 AI 自动化、副业赚钱、电商运营、内容创作、海外获客等场景整理。</p>
+    <p>人工精选的深度教程，按 AI 自动化、AI变现、电商运营、内容创作、海外获客等场景整理。</p>
   </div>
   <a class="tutorial-entry-panel" href="/tutorials/">
-    <span class="tutorial-entry-label">会员教程 / 免费样章</span>
+    <span class="tutorial-entry-label">会员教程 / AI变现案例 / 免费样章</span>
     <strong>查看可直接照着做的 AI 教程</strong>
     <span>包含步骤拆解、工具清单、Prompt 模板、成本效果和风险提示。</span>
   </a>
@@ -39,9 +39,9 @@ title: 今日AI精选
     <p>把复杂工具、提示词和工作流拆成可执行步骤，减少自己摸索的时间。</p>
   </article>
   <article>
-    <span>案例</span>
-    <h2>看清怎么赚钱</h2>
-    <p>记录可验证的 AI 变现案例，也标出数据缺口、夸大风险和幸存者偏差。</p>
+    <span>AI变现</span>
+    <h2>看清哪里能收费</h2>
+    <p>记录可验证的 AI 变现案例、付费需求和服务机会，也标出数据缺口、夸大风险和幸存者偏差。</p>
   </article>
   <article>
     <span>效率</span>
@@ -65,7 +65,7 @@ title: 今日AI精选
 
 <section class="home-hero">
   <div class="hero-copy">
-    <p class="eyebrow">AI tutorials / monetization cases / productivity tips</p>
+    <p class="eyebrow">AI tutorials / AI monetization / productivity tips</p>
     <h1>Xinxianxing</h1>
     <p>Daily AI Action Cards for people who want practical things to learn, try, and save.</p>
     <div class="hero-actions">
@@ -97,9 +97,9 @@ title: 今日AI精选
     <p>Tools, prompts, and workflows are rewritten into practical steps you can test quickly.</p>
   </article>
   <article>
-    <span>Case</span>
-    <h2>See the business angle</h2>
-    <p>Monetization stories are kept grounded, with missing data and bias called out clearly.</p>
+    <span>Monetization</span>
+    <h2>See the paid angle</h2>
+    <p>Monetization cases, paid demand, and service opportunities stay grounded, with missing data and bias called out clearly.</p>
   </article>
   <article>
     <span>Productivity</span>

@@ -19,7 +19,7 @@ def print_banner():
     """Print the application banner."""
     banner = r"""
 [bold blue]信先行[/bold blue]
-[cyan]  AI教程 / 赚钱案例 / 效率技巧 Action Card 系统[/cyan]
+[cyan]  AI教程 / AI变现 / 效率技巧 Action Card 系统[/cyan]
     """
     console.print(banner)
 

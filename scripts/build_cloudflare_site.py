@@ -32,7 +32,7 @@ TUTORIALS_PUBLISHED = ROOT / "data/tutorials/published"
 TUTORIAL_CODES = ROOT / "data/tutorials/codes.json"
 
 SITE_TITLE = "信先行"
-SITE_DESCRIPTION = "AI教程、赚钱案例与效率技巧行动卡片"
+SITE_DESCRIPTION = "AI教程、AI变现与效率技巧行动卡片"
 SITE_URL = "https://xinxianxing.com"
 
 MARKDOWN_EXTENSIONS = [
@@ -229,7 +229,7 @@ def build_tutorial_list_page(tutorials: list[Tutorial]) -> str:
         for category in TUTORIAL_CATEGORIES
     )
     return f"""<section class="tutorial-intro">
-  <p>人工精选的深度教程，优先收录能直接上手的 AI 自动化、赚钱案例和效率技巧。</p>
+  <p>人工精选的深度教程，优先收录能直接上手的 AI 自动化、AI变现和效率技巧。</p>
   <div class="tutorial-category-links">
     {category_links}
   </div>
@@ -543,7 +543,7 @@ def layout(title: str, body_html: str, permalink: str) -> str:
 {article_header}{body_html}
   </main>
   <footer class="site-footer">
-    <p>信先行 · AI教程 / 赚钱案例 / 效率技巧</p>
+    <p>信先行 · AI教程 / AI变现 / 效率技巧</p>
   </footer>
 </body>
 </html>

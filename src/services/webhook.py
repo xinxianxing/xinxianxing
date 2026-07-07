@@ -27,7 +27,7 @@ _UNRESOLVED_ENV_REF_RE = re.compile(r"^\$\{[A-Za-z_][A-Za-z0-9_]*\}$")
 _DEFAULT_SITE_BASE_URL = "https://xinxianxing.com"
 _SIGNAL_TYPE_LABELS_ZH = {
     SignalType.TUTORIAL: "教程",
-    SignalType.MONEY_CASE: "赚钱案例",
+    SignalType.MONEY_CASE: "AI变现",
     SignalType.PRODUCTIVITY_TIP: "效率技巧",
     SignalType.NEWS: "新闻",
     SignalType.TOOL: "工具",
@@ -39,7 +39,7 @@ _SIGNAL_TYPE_LABELS_ZH = {
 }
 _SIGNAL_TYPE_LABELS_EN = {
     SignalType.TUTORIAL: "Tutorial",
-    SignalType.MONEY_CASE: "Money Case",
+    SignalType.MONEY_CASE: "AI Monetization",
     SignalType.PRODUCTIVITY_TIP: "Productivity Tip",
     SignalType.NEWS: "News",
     SignalType.TOOL: "Tool",
@@ -48,6 +48,11 @@ _SIGNAL_TYPE_LABELS_EN = {
     SignalType.DEMAND: "Demand",
     SignalType.POLICY: "Policy",
     SignalType.RESEARCH: "Research",
+}
+_SIGNAL_TYPE_CONFIG_ALIASES = {
+    "AI_MONETIZATION": SignalType.MONEY_CASE,
+    "MONETIZATION": SignalType.MONEY_CASE,
+    "MONEY_CASE": SignalType.MONEY_CASE,
 }
 
 
@@ -231,6 +236,19 @@ def _is_blank_or_unresolved_env_ref(value: str | None) -> bool:
         return True
     text = value.strip()
     return not text or bool(_UNRESOLVED_ENV_REF_RE.fullmatch(text))
+
+
+def _signal_type_from_config_key(value: object) -> SignalType | None:
+    """Return signal type for webhook config keys, including product aliases."""
+    if isinstance(value, SignalType):
+        return value
+    raw = str(value).strip().upper()
+    if raw in _SIGNAL_TYPE_CONFIG_ALIASES:
+        return _SIGNAL_TYPE_CONFIG_ALIASES[raw]
+    try:
+        return SignalType(raw)
+    except ValueError:
+        return None
 
 
 def _site_config_value(key: str) -> str:
@@ -497,13 +515,8 @@ class WebhookNotifier:
             if _is_blank_or_unresolved_env_ref(raw_url):
                 continue
 
-            try:
-                signal = (
-                    raw_signal
-                    if isinstance(raw_signal, SignalType)
-                    else SignalType(str(raw_signal).upper())
-                )
-            except ValueError:
+            signal = _signal_type_from_config_key(raw_signal)
+            if signal is None:
                 logger.warning(
                     "Ignoring category_feishu entry with unknown signal type: %s",
                     raw_signal,

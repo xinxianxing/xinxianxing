@@ -38,7 +38,7 @@ _SCORE_RE = re.compile(r"\*\*实用度评分\*\*: Score: (?P<score>[0-9.]+) / 10
 
 TYPE_LABELS = {
     "TUTORIAL": "教程",
-    "MONEY_CASE": "赚钱案例",
+    "MONEY_CASE": "AI变现",
     "PRODUCTIVITY_TIP": "效率技巧",
     "NEWS": "资讯",
     "TOOL": "工具",
@@ -179,7 +179,7 @@ def _draw_header(draw: ImageDraw.ImageDraw, fonts: dict[str, ImageFont.FreeTypeF
 
     _draw_text(draw, (58, 38), "信先行 · 今日AI精选", fonts["brand"], "#ffffff")
     _draw_text(draw, (60, 108), date, fonts["date"], "#ffedd5")
-    _draw_text(draw, (WIDTH - 314, 111), "教程 / 赚钱案例 / 效率技巧", fonts["meta"], "#ffffff")
+    _draw_text(draw, (WIDTH - 288, 111), "教程 / AI变现 / 效率技巧", fonts["meta"], "#ffffff")
 
 
 def _draw_card(
