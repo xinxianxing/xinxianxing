@@ -582,6 +582,7 @@ Webhook notification is optional and disabled unless `webhook.enabled` is `true`
     "paid_feishu_url": "",
     "category_feishu": {
       "TUTORIAL": "",
+      "AI_MONETIZATION": "",
       "MONEY_CASE": "",
       "PRODUCTIVITY_TIP": ""
     },
@@ -602,7 +603,7 @@ Webhook notification is optional and disabled unless `webhook.enabled` is `true`
 - `enabled`: Turns webhook delivery on or off. The default is `false`.
 - `url_env`: Environment variable that contains the webhook URL. For example, set `XINXIANXING_WEBHOOK_URL=https://...` in `.env`.
 - `paid_feishu_url`: Optional direct Feishu/Lark bot URL for the paid-user channel. Leave it blank to skip paid delivery without affecting the public webhook.
-- `category_feishu`: Optional Feishu/Lark bot URLs keyed by `signal_type`. Each configured category receives only matching Action Cards. Blank values or unset `${ENV}` placeholders are skipped without affecting the public or paid webhook.
+- `category_feishu`: Optional Feishu/Lark bot URLs keyed by `signal_type`. Each configured category receives only matching Action Cards. Use `AI_MONETIZATION` for the AI变现 group; it maps to `MONEY_CASE` internally. Blank values or unset `${ENV}` placeholders are skipped without affecting the public or paid webhook.
 - `delivery`: Controls how messages are sent. Use `summary` for one full message, or `summary_and_items` for one overview message followed by one message per selected item.
 - `overview_position`: Controls where the overview is sent in `summary_and_items` mode. Use `first` for the traditional order, or `last` to send item details in reverse and keep the overview as the newest chat message.
 - `platform`: Optional webhook platform hint. Use `generic` by default, or `feishu` / `lark` to enable platform-specific card rendering.
@@ -676,7 +677,7 @@ When `delivery` is `summary_and_items`, item messages also include:
 
 For webhook delivery, 信先行 flattens HTML disclosure blocks such as `<details><summary>...</summary>` in `#{summary}` into plain Markdown link lists. This makes the generated summary easier to render in chat products. Saved Markdown files, GitHub Pages, and email content are unchanged.
 
-When `paid_feishu_url` is configured, 信先行 also sends a separate paid-channel Feishu card after the public webhook. The public webhook sends only the title, category, score, and site link for each selected item. The paid channel receives all score-qualified items for the day, but still keeps the Feishu message concise: title, category, score, one short intro, and a link to the full site content. If `category_feishu` contains URLs for signal types such as `TUTORIAL`, `MONEY_CASE`, or `PRODUCTIVITY_TIP`, 信先行 additionally sends category-only cards to those groups. If any optional URL is blank, invalid, or an unset `${ENV}` placeholder, that optional delivery is skipped and the public webhook continues normally.
+When `paid_feishu_url` is configured, 信先行 also sends a separate paid-channel Feishu card after the public webhook. The public webhook sends only the title, category, score, and site link for each selected item. The paid channel receives all score-qualified items for the day, but still keeps the Feishu message concise: title, category, score, one short intro, and a link to the full site content. If `category_feishu` contains URLs for signal types such as `TUTORIAL`, `AI_MONETIZATION`, `MONEY_CASE`, or `PRODUCTIVITY_TIP`, 信先行 additionally sends category-only cards to those groups. `AI_MONETIZATION` is a product-facing alias for `MONEY_CASE`. If any optional URL is blank, invalid, or an unset `${ENV}` placeholder, that optional delivery is skipped and the public webhook continues normally.
 
 When `publishing.auto_publish` is `false`, webhook item links point to the public review preview under `/drafts/YYYY-MM-DD-summary-LANG.html#item-N`. When `auto_publish` is `true`, links point to the normal published post URL under `/YYYY/MM/DD/summary-LANG.html#item-N`.
 
@@ -785,7 +786,8 @@ Optional:
 - `XINXIANXING_PAID_FEISHU_URL`: Paid-channel Feishu/Lark bot webhook URL. If it is
   unset, the paid push is skipped and the public push still runs.
 - `XINXIANXING_TUTORIAL_FEISHU_URL`: Category Feishu/Lark bot webhook URL for `TUTORIAL` cards.
-- `XINXIANXING_MONEY_CASE_FEISHU_URL`: Category Feishu/Lark bot webhook URL for `MONEY_CASE` cards.
+- `XINXIANXING_AI_MONETIZATION_FEISHU_URL`: Category Feishu/Lark bot webhook URL for the AI变现 group. This maps to `MONEY_CASE` cards internally.
+- `XINXIANXING_MONEY_CASE_FEISHU_URL`: Backward-compatible category Feishu/Lark bot webhook URL for `MONEY_CASE` cards. Prefer `XINXIANXING_AI_MONETIZATION_FEISHU_URL` for new setups.
 - `XINXIANXING_PRODUCTIVITY_TIP_FEISHU_URL`: Category Feishu/Lark bot webhook URL for `PRODUCTIVITY_TIP` cards.
 - `CLOUDFLARE_ACCOUNT_ID`: Cloudflare account ID for the `xinxianxing` Pages project.
 - `CLOUDFLARE_API_TOKEN`: Cloudflare API token with Account > Cloudflare Pages > Edit permission.
