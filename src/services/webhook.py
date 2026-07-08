@@ -212,14 +212,6 @@ def _safe_markdown_label(value: object, fallback: str = "") -> str:
     return _clean_markdown_text(value, fallback).replace("[", "(").replace("]", ")")
 
 
-def _clip_text(value: object, limit: int) -> str:
-    """Clip one-line webhook text without changing the underlying Action Card."""
-    text = _clean_markdown_text(value)
-    if len(text) <= limit:
-        return text
-    return text[: max(limit - 3, 0)].rstrip() + "..."
-
-
 def _format_score(value: object) -> str:
     """Format a score for compact Feishu snippets."""
     if value is None or value == "":
@@ -611,17 +603,6 @@ class WebhookNotifier:
             "Open the links below to read the full pages on the site."
         )
 
-    def _item_intro(self, item: ContentItem) -> str:
-        """Return the shortest useful intro for a webhook item snippet."""
-        return _clean_markdown_text(
-            item.intro
-            or item.ai_summary
-            or item.what_happened
-            or item.metadata.get("summary")
-            or item.content
-            or "暂无一句话简介。"
-        )
-
     def _item_title(self, item: ContentItem, lang: str) -> str:
         """Return localized item title for webhook snippets."""
         return _safe_markdown_label(item.metadata.get(f"title_{lang}") or item.title, "Untitled")
@@ -709,33 +690,6 @@ class WebhookNotifier:
             )
         return (
             f"**[{category}] {title}**\n\n"
-            f"Score {score} · [Read full card]({link})"
-        )
-
-    def _build_paid_item_summary(
-        self,
-        item: ContentItem,
-        date: str,
-        lang: str,
-        index: int,
-        total: int,
-    ) -> str:
-        """Build a compact paid-channel item with one short intro."""
-        title = self._item_title(item, lang)
-        category = self._item_signal_label(item, lang)
-        score = self._item_score_label(item)
-        intro = _clip_text(self._item_intro(item), 40)
-        link = self._item_page_url(date, lang, index)
-        if lang == "zh":
-            return (
-                f"**[{category}] {title}**\n\n"
-                f"{intro}\n\n"
-                f"Score {score} · [查看完整内容]({link})"
-            )
-
-        return (
-            f"**[{category}] {title}**\n\n"
-            f"{intro}\n\n"
             f"Score {score} · [Read full card]({link})"
         )
 
@@ -839,7 +793,7 @@ class WebhookNotifier:
         summarizer: DailySummarizer,
         score_threshold: float | None = None,
     ) -> List[dict[str, Any]]:
-        """Build concise Action Card messages for the optional paid Feishu channel."""
+        """Build public-style title list messages for the optional paid channel."""
         if not self.paid_feishu_url:
             return []
 
@@ -848,59 +802,24 @@ class WebhookNotifier:
             key=lambda item: item.ai_score or 0,
             reverse=True,
         )
-        threshold_text = (
-            f"实用度 >= {score_threshold:g}"
-            if lang == "zh" and score_threshold is not None
-            else f"score >= {score_threshold:g}"
-            if score_threshold is not None
-            else "已达标"
+        title = (
+            f"信先行 {date} 付费精选"
+            if lang == "zh"
+            else f"Xinxianxing {date} Paid Picks"
         )
-
-        if lang == "zh":
-            overview = (
-                f"# 信先行付费精选 - {date}\n\n"
-                f"{len(sorted_items)} 条达标（{threshold_text}），"
-                "按实用度排序。点链接看完整内容。"
-            )
-            overview_title = f"信先行付费精选卡片 - {date}"
-        else:
-            overview = (
-                f"# Xinxianxing Paid Picks - {date}\n\n"
-                f"{len(sorted_items)} cards met {threshold_text}, sorted by utility. "
-                "Open links for the full version."
-            )
-            overview_title = f"Xinxianxing Paid Cards - {date}"
-
-        messages = [
+        content = self._build_public_digest_summary(
+            important_items=sorted_items,
+            all_items_count=all_items_count,
+            date=date,
+            lang=lang,
+        )
+        return [
             self._build_paid_feishu_card(
-                overview_title,
-                overview,
+                title,
+                content,
                 template="green",
             )
         ]
-
-        for item_index, item in enumerate(sorted_items, start=1):
-            title = str(item.metadata.get(f"title_{lang}") or item.title)
-            if lang == "zh":
-                message_title = f"{item_index}/{len(sorted_items)} {title}"
-            else:
-                message_title = f"{item_index}/{len(sorted_items)} {title}"
-            item_content = self._build_paid_item_summary(
-                item,
-                date=date,
-                lang=lang,
-                index=item_index,
-                total=len(sorted_items),
-            )
-            messages.append(
-                self._build_paid_feishu_card(
-                    message_title[:80],
-                    item_content,
-                    template="blue",
-                )
-            )
-
-        return messages
 
     def _build_category_feishu_summary(
         self,

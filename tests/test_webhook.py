@@ -904,8 +904,8 @@ class TestSendDailySummary:
             mock_paid.assert_not_called()
         del os.environ[_TEST_URL_ENV]
 
-    def test_paid_feishu_delivery_sends_concise_action_cards(self):
-        """Paid Feishu delivery sends title-focused cards with site links."""
+    def test_paid_feishu_delivery_matches_public_title_list_style(self):
+        """Paid Feishu delivery uses the same compact list style as public delivery."""
         os.environ[_TEST_URL_ENV] = _TEST_URL
         config = WebhookConfig(
             enabled=True,
@@ -946,31 +946,20 @@ class TestSendDailySummary:
             )
 
             mock_notify.assert_called_once()
-            assert mock_paid.call_count == 3
+            assert mock_paid.call_count == 1
 
-            overview_body = mock_paid.call_args_list[0][0][0]
-            overview_content = overview_body["card"]["body"]["elements"][0]["content"]
-            assert "2 条达标" in overview_content
-            assert "实用度 >= 6" in overview_content
-            assert "点链接看完整内容" in overview_content
-
-            first_card = mock_paid.call_args_list[1][0][0]
-            first_content = first_card["card"]["body"]["elements"][0]["content"]
-            assert "精选公开卡片" in first_content
-            assert "[教程]" in first_content
-            assert "一个教程技巧" in first_content
-            assert "Score 8.0" in first_content
-            assert "具体怎么做" not in first_content
-            assert "打开工具" not in first_content
-            assert "适合谁" not in first_content
-            assert "https://xinxianxing.com/2026/04/24/summary-zh.html#item-1" in first_content
-
-            second_card = mock_paid.call_args_list[2][0][0]
-            second_content = second_card["card"]["body"]["elements"][0]["content"]
-            assert "付费额外卡片" in second_content
-            assert "[效率技巧]" in second_content
-            assert "Score 7.0" in second_content
-            assert "批量执行" not in second_content
+            paid_card = mock_paid.call_args_list[0][0][0]
+            assert paid_card["card"]["header"]["title"]["content"] == "信先行 2026-04-24 付费精选"
+            paid_content = paid_card["card"]["body"]["elements"][0]["content"]
+            assert "1. **[教程] 精选公开卡片**" in paid_content
+            assert "2. **[效率技巧] 付费额外卡片**" in paid_content
+            assert "Score 8.0" in paid_content
+            assert "Score 7.0" in paid_content
+            assert "https://xinxianxing.com/2026/04/24/summary-zh.html#item-1" in paid_content
+            assert "https://xinxianxing.com/2026/04/24/summary-zh.html#item-2" in paid_content
+            assert "一个教程技巧" not in paid_content
+            assert "打开工具" not in paid_content
+            assert "批量执行" not in paid_content
         del os.environ[_TEST_URL_ENV]
 
     def test_category_feishu_delivery_sends_only_matching_signal_types(self):
