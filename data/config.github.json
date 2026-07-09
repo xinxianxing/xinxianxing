@@ -22,6 +22,16 @@
   },
   "channels": [
     {
+      "id": "review",
+      "name": "信先行·内容审核群",
+      "webhook_url": "${CHANNEL_REVIEW_WEBHOOK}",
+      "content_tags": [],
+      "sources": [],
+      "signal_types": [],
+      "min_score": 0.0,
+      "active": true
+    },
+    {
       "id": "ai-tools",
       "name": "信先行·AI工具(内测)",
       "webhook_url": "${CHANNEL_AI_TOOLS_WEBHOOK}",

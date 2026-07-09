@@ -138,3 +138,170 @@ def test_push_draft_channels_alerts_admin_when_channel_fails(tmp_path: Path) -> 
     mock_alert.assert_awaited_once()
     assert mock_alert.call_args.kwargs["channel_id"] == "ai-tools-partner-a"
     assert "invalid token" in mock_alert.call_args.kwargs["reason"]
+
+
+def test_push_draft_channels_can_target_review_channel_only(tmp_path: Path) -> None:
+    data_dir = tmp_path / "data"
+    drafts_dir = data_dir / "drafts"
+    drafts_dir.mkdir(parents=True)
+    (drafts_dir / "xinxianxing-2026-07-09-zh.md").write_text(
+        SAMPLE_DRAFT.replace("Score: 8.0 / 10", "Score: 3.0 / 10"),
+        encoding="utf-8",
+    )
+    config = {
+        "version": "1.0",
+        "site": {"base_url": "https://xinxianxing.com"},
+        "ai": {
+            "provider": "deepseek",
+            "model": "deepseek-chat",
+            "api_key_env": "DEEPSEEK_API_KEY",
+        },
+        "sources": {},
+        "filtering": {
+            "ai_score_threshold": 6.0,
+            "time_window_hours": 24,
+            "category_groups": {},
+            "default_group": "other",
+        },
+        "publishing": {"auto_publish": False},
+        "webhook": {
+            "enabled": True,
+            "url_env": None,
+            "platform": "generic",
+            "layout": "markdown",
+        },
+        "channels": [
+            {
+                "id": "review",
+                "name": "信先行·内容审核群",
+                "webhook_url": "https://example.com/review",
+                "content_tags": [],
+                "sources": [],
+                "signal_types": [],
+                "min_score": 0.0,
+                "active": True,
+            },
+            {
+                "id": "ai-tools",
+                "name": "信先行·AI工具",
+                "webhook_url": "https://example.com/ai-tools",
+                "content_tags": ["ai", "tutorial"],
+                "sources": [],
+                "signal_types": ["TUTORIAL"],
+                "min_score": 6.0,
+                "active": True,
+            },
+        ],
+    }
+    (data_dir / "config.json").write_text(
+        json.dumps(config, ensure_ascii=False),
+        encoding="utf-8",
+    )
+
+    with patch.object(
+        WebhookNotifier,
+        "notify_channel_feishu",
+        new_callable=AsyncMock,
+        return_value=True,
+    ) as mock_push:
+        import asyncio
+
+        sent = asyncio.run(
+            push_draft_channels(
+                date="2026-07-09",
+                language="zh",
+                data_dir=data_dir,
+                admin_webhook_url=None,
+                channel_ids={"review"},
+            )
+        )
+
+    assert sent == 1
+    mock_push.assert_awaited_once()
+    sent_channel, body = mock_push.call_args.args[:2]
+    assert sent_channel.id == "review"
+    content = body["card"]["body"]["elements"][0]["content"]
+    assert "提示词测试集教程" in content
+    assert "Score 3.0" in content
+
+
+def test_push_draft_channels_can_exclude_review_channel(tmp_path: Path) -> None:
+    data_dir = tmp_path / "data"
+    drafts_dir = data_dir / "drafts"
+    drafts_dir.mkdir(parents=True)
+    (drafts_dir / "xinxianxing-2026-07-09-zh.md").write_text(
+        SAMPLE_DRAFT,
+        encoding="utf-8",
+    )
+    config = {
+        "version": "1.0",
+        "site": {"base_url": "https://xinxianxing.com"},
+        "ai": {
+            "provider": "deepseek",
+            "model": "deepseek-chat",
+            "api_key_env": "DEEPSEEK_API_KEY",
+        },
+        "sources": {},
+        "filtering": {
+            "ai_score_threshold": 6.0,
+            "time_window_hours": 24,
+            "category_groups": {},
+            "default_group": "other",
+        },
+        "publishing": {"auto_publish": False},
+        "webhook": {
+            "enabled": True,
+            "url_env": None,
+            "platform": "generic",
+            "layout": "markdown",
+        },
+        "channels": [
+            {
+                "id": "review",
+                "name": "信先行·内容审核群",
+                "webhook_url": "https://example.com/review",
+                "content_tags": [],
+                "sources": [],
+                "signal_types": [],
+                "min_score": 0.0,
+                "active": True,
+            },
+            {
+                "id": "ai-tools",
+                "name": "信先行·AI工具",
+                "webhook_url": "https://example.com/ai-tools",
+                "content_tags": ["ai", "tutorial"],
+                "sources": [],
+                "signal_types": ["TUTORIAL"],
+                "min_score": 6.0,
+                "active": True,
+            },
+        ],
+    }
+    (data_dir / "config.json").write_text(
+        json.dumps(config, ensure_ascii=False),
+        encoding="utf-8",
+    )
+
+    with patch.object(
+        WebhookNotifier,
+        "notify_channel_feishu",
+        new_callable=AsyncMock,
+        return_value=True,
+    ) as mock_push:
+        import asyncio
+
+        sent = asyncio.run(
+            push_draft_channels(
+                date="2026-07-09",
+                language="zh",
+                data_dir=data_dir,
+                admin_webhook_url=None,
+                exclude_channel_ids={"review"},
+            )
+        )
+
+    assert sent == 1
+    mock_push.assert_awaited_once()
+    sent_channel = mock_push.call_args.args[0]
+    assert sent_channel.id == "ai-tools"

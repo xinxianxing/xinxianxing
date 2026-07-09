@@ -65,6 +65,8 @@ jobs:
         env:
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
           APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
+          CHANNEL_REVIEW_WEBHOOK: ${{ secrets.CHANNEL_REVIEW_WEBHOOK }}
+          HORIZON_ADMIN_WEBHOOK: ${{ secrets.HORIZON_ADMIN_WEBHOOK }}
         run: |
           missing=0
           for name in DEEPSEEK_API_KEY APIFY_TOKEN; do
@@ -73,6 +75,12 @@ jobs:
               missing=1
             fi
           done
+          if [ -z "$CHANNEL_REVIEW_WEBHOOK" ]; then
+            echo "::notice::CHANNEL_REVIEW_WEBHOOK is not set; the 06:00 review-group push will be skipped."
+          fi
+          if [ -z "$HORIZON_ADMIN_WEBHOOK" ]; then
+            echo "::warning::HORIZON_ADMIN_WEBHOOK is not set; failed review pushes cannot send admin alerts."
+          fi
           exit "$missing"
 
       - name: Prepare GitHub Actions config
@@ -151,6 +159,12 @@ jobs:
           command: pages deploy dist --project-name=xinxianxing --branch=main
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Push draft to review channel
+        env:
+          CHANNEL_REVIEW_WEBHOOK: ${{ secrets.CHANNEL_REVIEW_WEBHOOK }}
+          HORIZON_ADMIN_WEBHOOK: ${{ secrets.HORIZON_ADMIN_WEBHOOK }}
+        run: uv run horizon-channel-push --date "$RUN_DATE" --language zh --channel-id review
+
   push-channels:
     needs: generate-draft
     if: >-
@@ -208,10 +222,11 @@ jobs:
           CHANNEL_AI_TUTORIALS_WEBHOOK: ${{ secrets.CHANNEL_AI_TUTORIALS_WEBHOOK }}
           CHANNEL_AI_MONETIZATION_WEBHOOK: ${{ secrets.CHANNEL_AI_MONETIZATION_WEBHOOK }}
           CHANNEL_PRODUCTIVITY_TIPS_WEBHOOK: ${{ secrets.CHANNEL_PRODUCTIVITY_TIPS_WEBHOOK }}
+          CHANNEL_REVIEW_WEBHOOK: ${{ secrets.CHANNEL_REVIEW_WEBHOOK }}
           CHANNEL_ECOMMERCE_WEBHOOK: ${{ secrets.CHANNEL_ECOMMERCE_WEBHOOK }}
           HORIZON_ADMIN_WEBHOOK: ${{ secrets.HORIZON_ADMIN_WEBHOOK }}
         run: |
-          for name in CHANNEL_AI_TOOLS_WEBHOOK CHANNEL_AI_TOOLS_PAID_WEBHOOK CHANNEL_AI_TUTORIALS_WEBHOOK CHANNEL_AI_MONETIZATION_WEBHOOK CHANNEL_PRODUCTIVITY_TIPS_WEBHOOK CHANNEL_ECOMMERCE_WEBHOOK; do
+          for name in CHANNEL_AI_TOOLS_WEBHOOK CHANNEL_AI_TOOLS_PAID_WEBHOOK CHANNEL_AI_TUTORIALS_WEBHOOK CHANNEL_AI_MONETIZATION_WEBHOOK CHANNEL_PRODUCTIVITY_TIPS_WEBHOOK CHANNEL_REVIEW_WEBHOOK CHANNEL_ECOMMERCE_WEBHOOK; do
             if [ -z "${!name}" ]; then
               echo "::notice::${name} is not set; that channel will be skipped if active."
             fi
@@ -233,6 +248,7 @@ jobs:
           CHANNEL_AI_TUTORIALS_WEBHOOK: ${{ secrets.CHANNEL_AI_TUTORIALS_WEBHOOK }}
           CHANNEL_AI_MONETIZATION_WEBHOOK: ${{ secrets.CHANNEL_AI_MONETIZATION_WEBHOOK }}
           CHANNEL_PRODUCTIVITY_TIPS_WEBHOOK: ${{ secrets.CHANNEL_PRODUCTIVITY_TIPS_WEBHOOK }}
+          CHANNEL_REVIEW_WEBHOOK: ${{ secrets.CHANNEL_REVIEW_WEBHOOK }}
           CHANNEL_ECOMMERCE_WEBHOOK: ${{ secrets.CHANNEL_ECOMMERCE_WEBHOOK }}
           HORIZON_ADMIN_WEBHOOK: ${{ secrets.HORIZON_ADMIN_WEBHOOK }}
-        run: uv run horizon-channel-push --date "$RUN_DATE" --language zh
+        run: uv run horizon-channel-push --date "$RUN_DATE" --language zh --exclude-channel-id review

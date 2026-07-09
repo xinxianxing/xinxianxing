@@ -133,6 +133,8 @@ async def push_draft_channels(
     language: str = "zh",
     data_dir: str | Path = "data",
     admin_webhook_url: str | None = None,
+    channel_ids: set[str] | None = None,
+    exclude_channel_ids: set[str] | None = None,
 ) -> int:
     """Push one daily draft to all matching active channels.
 
@@ -141,6 +143,18 @@ async def push_draft_channels(
     """
     storage = StorageManager(data_dir=str(data_dir))
     config = storage.load_config()
+    include = {channel_id.strip() for channel_id in (channel_ids or set()) if channel_id.strip()}
+    exclude = {
+        channel_id.strip()
+        for channel_id in (exclude_channel_ids or set())
+        if channel_id.strip()
+    }
+    if include or exclude:
+        config.channels = [
+            channel
+            for channel in config.channels
+            if (not include or channel.id in include) and channel.id not in exclude
+        ]
     draft_path = storage.drafts_dir / f"xinxianxing-{date}-{language}.md"
     if not draft_path.exists():
         raise FileNotFoundError(f"Daily draft not found: {draft_path}")
@@ -394,6 +408,18 @@ def main() -> None:
     parser.add_argument("--date", default=_default_date(), help="Draft date, YYYY-MM-DD")
     parser.add_argument("--language", default="zh", help="Draft language, default zh")
     parser.add_argument("--data-dir", default="data", help="Data directory, default data")
+    parser.add_argument(
+        "--channel-id",
+        action="append",
+        default=[],
+        help="Only push the specified channel id. Repeat for multiple ids.",
+    )
+    parser.add_argument(
+        "--exclude-channel-id",
+        action="append",
+        default=[],
+        help="Skip the specified channel id. Repeat for multiple ids.",
+    )
     args = parser.parse_args()
 
     try:
@@ -403,6 +429,8 @@ def main() -> None:
                 language=args.language,
                 data_dir=args.data_dir,
                 admin_webhook_url=os.getenv("HORIZON_ADMIN_WEBHOOK"),
+                channel_ids=set(args.channel_id),
+                exclude_channel_ids=set(args.exclude_channel_id),
             )
         )
     except Exception as exc:
