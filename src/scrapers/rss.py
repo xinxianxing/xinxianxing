@@ -87,6 +87,7 @@ class RSSScraper(BaseScraper):
 
                 # Generate unique ID from feed URL and entry ID
                 feed_id = str(source.url).split("//")[1].replace("/", "_")
+                source_id = source.id or self._slug_source_id("rss", source.name)
                 entry_id = entry.get("id", entry.get("link", ""))
                 entry_hash = hashlib.sha256(str(entry_id).encode("utf-8")).hexdigest()[
                     :16
@@ -104,6 +105,8 @@ class RSSScraper(BaseScraper):
                     author=entry.get("author", source.name),
                     published_at=published_at,
                     metadata={
+                        "source_id": source_id,
+                        "source_ids": [source_id, SourceType.RSS.value],
                         "feed_name": source.name,
                         "category": source.category,
                         "tags": [tag.term for tag in entry.get("tags", [])],

@@ -61,12 +61,13 @@ class XinxianxingOrchestrator:
                 console=self.console,
                 site_base_url=config.site.base_url,
                 draft_preview_links=not config.publishing.auto_publish,
+                channels=config.channels,
             )
             if config.webhook and config.webhook.enabled
             else None
         )
 
-    async def run(self, force_hours: int = None) -> None:
+    async def run(self, force_hours: int = None, run_date: str | None = None) -> None:
         """Execute the complete workflow.
 
         Args:
@@ -156,7 +157,7 @@ class XinxianxingOrchestrator:
             await self._enrich_important_items(important_items)
 
             # 7. Generate and save daily summaries for each configured language
-            today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+            today = run_date or datetime.now(timezone.utc).strftime("%Y-%m-%d")
             share_image_draft_path = None
             for lang in self.config.ai.languages:
                 summarizer = DailySummarizer()

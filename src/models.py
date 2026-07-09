@@ -148,6 +148,7 @@ class AIConfig(BaseModel):
 class GitHubSourceConfig(BaseModel):
     """GitHub source configuration."""
 
+    id: Optional[str] = None
     type: str  # "user_events", "repo_releases", etc.
     username: Optional[str] = None
     owner: Optional[str] = None
@@ -158,6 +159,7 @@ class GitHubSourceConfig(BaseModel):
 class HackerNewsConfig(BaseModel):
     """Hacker News configuration."""
 
+    id: str = "hackernews"
     enabled: bool = True
     fetch_top_stories: int = 30
     min_score: int = 100
@@ -166,6 +168,7 @@ class HackerNewsConfig(BaseModel):
 class RSSSourceConfig(BaseModel):
     """RSS feed source configuration."""
 
+    id: Optional[str] = None
     name: str
     url: HttpUrl
     enabled: bool = True
@@ -175,6 +178,7 @@ class RSSSourceConfig(BaseModel):
 class RedditSubredditConfig(BaseModel):
     """Configuration for monitoring a specific subreddit."""
 
+    id: Optional[str] = None
     subreddit: str
     enabled: bool = True
     sort: str = "hot"  # hot, new, top, rising
@@ -188,6 +192,7 @@ class RedditSubredditConfig(BaseModel):
 class RedditUserConfig(BaseModel):
     """Configuration for monitoring a specific Reddit user."""
 
+    id: Optional[str] = None
     username: str  # without u/ prefix
     enabled: bool = True
     sort: str = "new"
@@ -206,6 +211,7 @@ class RedditConfig(BaseModel):
 class TelegramChannelConfig(BaseModel):
     """Configuration for monitoring a specific Telegram channel."""
 
+    id: Optional[str] = None
     channel: str  # channel username, e.g. "zaihuapd"
     enabled: bool = True
     fetch_limit: int = 20
@@ -226,6 +232,7 @@ class TwitterConfig(BaseModel):
     - "playwright": Use Playwright + browser cookies (free, no token needed)
     """
 
+    id: str = "twitter"
     enabled: bool = True
     mode: str = "apify"  # "apify" or "playwright"
     users: List[str] = Field(default_factory=list)
@@ -252,6 +259,7 @@ class OpenBBWatchlist(BaseModel):
     symbols by provider rather than creating one watchlist per symbol.
     """
 
+    id: Optional[str] = None
     name: str
     symbols: List[str] = Field(default_factory=list)
     enabled: bool = True
@@ -289,6 +297,7 @@ class OSSInsightConfig(BaseModel):
     languages.
     """
 
+    id: str = "ossinsight"
     enabled: bool = False
     period: str = "past_24_hours"  # past_24_hours, past_28_days
     languages: List[str] = Field(
@@ -385,6 +394,19 @@ class WebhookConfig(BaseModel):
         return v
 
 
+class ChannelConfig(BaseModel):
+    """Independent Feishu channel delivery configuration."""
+
+    id: str
+    name: str
+    webhook_url: Optional[str] = None
+    content_tags: List[str] = Field(default_factory=list)
+    sources: List[str] = Field(default_factory=list)
+    signal_types: List[str] = Field(default_factory=list)
+    min_score: float = 6.0
+    active: bool = True
+
+
 class SiteConfig(BaseModel):
     """Public website configuration."""
 
@@ -442,5 +464,6 @@ class Config(BaseModel):
     sources: SourcesConfig
     filtering: FilteringConfig
     publishing: PublishingConfig = Field(default_factory=PublishingConfig)
+    channels: List[ChannelConfig] = Field(default_factory=list)
     email: Optional[EmailConfig] = None
     webhook: Optional[WebhookConfig] = None

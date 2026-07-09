@@ -347,6 +347,8 @@ class TwitterScraper(BaseScraper):
                 title_body += "..."
 
             metadata = {
+                "source_id": self.config.id,
+                "source_ids": [self.config.id, SourceType.TWITTER.value],
                 "tweet_id": numeric_id,
                 "conversation_id": conversation_id,
                 "favorite_count": item.get("favorite_count", 0),

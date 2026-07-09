@@ -116,6 +116,8 @@ class OSSInsightScraper(BaseScraper):
             author=repo_name.split("/")[0] if "/" in repo_name else None,
             published_at=datetime.now(timezone.utc),
             metadata={
+                "source_id": self.cfg.id,
+                "source_ids": [self.cfg.id, SourceType.OSSINSIGHT.value],
                 "repo": repo_name,
                 "stars_gained": stars_gained,
                 "forks_gained": self._int(row.get("forks")),

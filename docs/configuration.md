@@ -615,6 +615,83 @@ Webhook notification is optional and disabled unless `webhook.enabled` is `true`
 
 When `request_body` is a JSON object or array, 信先行 renders placeholders and serializes it as JSON. When it is a string, 信先行 renders it directly and detects JSON if the rendered string is valid JSON.
 
+### Multi-Channel Feishu Delivery
+
+For partner groups or industry-specific groups, prefer the top-level `channels`
+array. Each channel has its own Feishu bot URL, content tags, optional source
+subscriptions, optional signal types, score threshold, and active switch:
+
+```json
+{
+  "channels": [
+    {
+      "id": "ai-tools",
+      "name": "信先行·AI工具(内测)",
+      "webhook_url": "${CHANNEL_AI_TOOLS_WEBHOOK}",
+      "content_tags": ["ai", "tutorial"],
+      "sources": ["hackernews", "reddit_artificial", "twitter"],
+      "signal_types": ["TUTORIAL", "PRODUCTIVITY_TIP", "MONEY_CASE"],
+      "min_score": 6.0,
+      "active": true
+    },
+    {
+      "id": "ai-tools-partner-a",
+      "name": "信先行·AI工具(合作方A)",
+      "webhook_url": "${CHANNEL_AI_TOOLS_PARTNER_A_WEBHOOK}",
+      "content_tags": ["ai", "tutorial"],
+      "min_score": 6.0,
+      "active": true
+    },
+    {
+      "id": "ai-tools-partner-b",
+      "name": "信先行·AI工具(合作方B)",
+      "webhook_url": "${CHANNEL_AI_TOOLS_PARTNER_B_WEBHOOK}",
+      "content_tags": ["ai", "tutorial"],
+      "min_score": 6.0,
+      "active": true
+    }
+  ]
+}
+```
+
+- `id`: Stable unique channel id. The recommended GitHub Actions Secret name is
+  `CHANNEL_[ID in uppercase with - changed to _]_WEBHOOK`.
+- `name`: Display name used in the Feishu card title.
+- `webhook_url`: Feishu/Lark bot URL, usually stored as a `${CHANNEL_...}`
+  environment placeholder.
+- `content_tags`: Reusable routing tags for content fan-out. Multiple channels
+  can share the same tags; one generated Action Card is reused and sent to every
+  active channel whose tags match. Matching uses AI tags, source metadata tags,
+  and derived tags from `signal_type` such as `tutorial`, `productivity`, and
+  `monetization`.
+- `sources`: Source ids this channel subscribes to. Source configs can define an
+  explicit `id`; otherwise scrapers derive ids such as `hackernews`,
+  `twitter`, `reddit_artificial`, or `rss_product_hunt_ai`.
+- `signal_types`: Action Card types allowed in this channel. `AI_MONETIZATION`
+  is accepted as an alias for `MONEY_CASE`.
+- `min_score`: Minimum score for this channel.
+- `active`: Set `false` to pause a channel without deleting its configuration.
+
+Active channels replace only their matching legacy target to avoid duplicate
+pushes during migration: `ai-tools` replaces the legacy public group,
+`ai-tools-paid` replaces the legacy paid group, and category-specific channels
+replace only the legacy category signals they cover. If a channel URL is blank
+or an unresolved `${ENV}` placeholder, 信先行 keeps using the corresponding
+legacy `webhook.url_env`, `paid_feishu_url`, or `category_feishu` target.
+
+Use the helper to add a new channel interactively:
+
+```bash
+uv run horizon-channel-add
+```
+
+To push an already-generated draft to active channels without re-running
+scraping or AI analysis:
+
+```bash
+uv run horizon-channel-push --date 2026-07-09 --language zh
+```
+
 ### Delivery Modes And Layouts
 
 `delivery` controls how many webhook messages 信先行 sends:
@@ -760,11 +837,16 @@ With this layout, 信先行 sends one interactive card containing the overview a
 
 ## GitHub Actions Daily Drafts
 
-`.github/workflows/daily-summary.yml` runs once per day at 00:17 UTC, which is
-08:17 in Asia/Shanghai. The workflow uses `data/config.github.json`, maps
-runtime secrets from GitHub Actions Secrets, runs `uv run xinxianxing --hours 24`,
-commits generated review artifacts, and deploys the built static site to
-Cloudflare Pages when Cloudflare credentials are configured:
+`.github/workflows/daily-summary.yml` runs in two daily stages:
+
+- `0 22 * * *` UTC = 06:00 Asia/Shanghai next day: generate the draft with
+  `uv run horizon --hours 24 --skip-webhook`, commit review artifacts, and
+  deploy the preview site when Cloudflare credentials are configured.
+- `0 0 * * *` UTC = 08:00 Asia/Shanghai: read the existing daily draft and
+  push it to every matching active channel with `uv run horizon-channel-push`.
+
+The workflow uses `data/config.github.json`, maps runtime secrets from GitHub
+Actions Secrets, and commits generated review artifacts:
 
 - `data/drafts/`
 - `docs/_drafts/`
@@ -775,14 +857,25 @@ The workflow explicitly checks that `publishing.auto_publish` is `false` and
 fails if `docs/_posts/` is changed. Moving reviewed drafts into `docs/_posts/`
 remains a manual publishing step.
 
-Required GitHub Actions Secrets for the current configuration:
+Required GitHub Actions Secrets for the generation stage:
 
 - `DEEPSEEK_API_KEY`: DeepSeek API key used by `ai.api_key_env`.
 - `APIFY_TOKEN`: Apify API token used by the Twitter/X scraper.
+
+Required or recommended GitHub Actions Secrets for channel delivery:
+
+- `CHANNEL_AI_TOOLS_WEBHOOK`: Feishu/Lark bot URL for the migrated free AI tools group.
+- `CHANNEL_AI_TOOLS_PAID_WEBHOOK`: Feishu/Lark bot URL for the migrated paid AI tools group.
+- `CHANNEL_AI_TUTORIALS_WEBHOOK`: Feishu/Lark bot URL for the AI tutorial group.
+- `CHANNEL_AI_MONETIZATION_WEBHOOK`: Feishu/Lark bot URL for the AI变现 group.
+- `CHANNEL_PRODUCTIVITY_TIPS_WEBHOOK`: Feishu/Lark bot URL for the efficiency tips group.
+- `CHANNEL_ECOMMERCE_WEBHOOK`: Feishu/Lark bot URL for the ecommerce group. The bundled ecommerce channel is inactive until you enable it.
+- `HORIZON_ADMIN_WEBHOOK`: Admin-only Feishu/Lark bot URL for system alerts
+  such as failed channel pushes.
+
+Backward-compatible optional legacy delivery secrets:
+
 - `XINXIANXING_WEBHOOK_URL`: Public Feishu/Lark bot webhook URL.
-
-Optional:
-
 - `XINXIANXING_PAID_FEISHU_URL`: Paid-channel Feishu/Lark bot webhook URL. If it is
   unset, the paid push is skipped and the public push still runs.
 - `XINXIANXING_TUTORIAL_FEISHU_URL`: Category Feishu/Lark bot webhook URL for `TUTORIAL` cards.

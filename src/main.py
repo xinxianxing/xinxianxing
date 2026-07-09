@@ -30,6 +30,15 @@ def main():
 
     parser = argparse.ArgumentParser(description="信先行 - AI Action Card aggregation system")
     parser.add_argument("--hours", type=int, help="Force fetch from last N hours")
+    parser.add_argument(
+        "--date",
+        help="Override output date as YYYY-MM-DD (used by scheduled automation)",
+    )
+    parser.add_argument(
+        "--skip-webhook",
+        action="store_true",
+        help="Generate drafts and assets without sending webhook notifications",
+    )
     args = parser.parse_args()
 
     try:
@@ -65,9 +74,12 @@ def main():
             console.print(f"[bold red]❌ Error loading configuration: {e}[/bold red]")
             sys.exit(1)
 
+        if args.skip_webhook and config.webhook:
+            config.webhook.enabled = False
+
         # Create and run orchestrator
         orchestrator = XinxianxingOrchestrator(config, storage)
-        asyncio.run(orchestrator.run(force_hours=args.hours))
+        asyncio.run(orchestrator.run(force_hours=args.hours, run_date=args.date))
 
     except KeyboardInterrupt:
         console.print("\n[yellow]⚠️  Interrupted by user[/yellow]")

@@ -39,11 +39,17 @@ twitter = [
 
 [project.scripts]
 xinxianxing = "src.main:main"
+horizon = "src.main:main"
 xinxianxing-add = "src.services.manual_add:main"
+horizon-add = "src.services.manual_add:main"
 xinxianxing-tutorial-add = "src.services.tutorial_add:main"
 horizon-tutorial-add = "src.services.tutorial_add:main"
 xinxianxing-tutorial-webapp = "src.services.tutorial_webapp:main"
 horizon-tutorial-webapp = "src.services.tutorial_webapp:main"
+xinxianxing-channel-add = "src.services.channel_add:main"
+horizon-channel-add = "src.services.channel_add:main"
+xinxianxing-channel-push = "src.services.channel_push:main"
+horizon-channel-push = "src.services.channel_push:main"
 xinxianxing-mcp = "src.mcp.server:main"
 xinxianxing-wizard = "src.setup.wizard:main"
 xinxianxing-webhook = "src.services.webhook_cli:main"

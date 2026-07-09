@@ -10,7 +10,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import httpx
 from pydantic import ValidationError
 
-from src.models import ContentItem, SignalType, SourceType, WebhookConfig
+from src.models import ChannelConfig, ContentItem, SignalType, SourceType, WebhookConfig
 from src.services.webhook import (
     WebhookNotifier,
     _format_markdown_for_webhook,
@@ -807,6 +807,25 @@ class TestWebhookConfigModel:
         assert config.fallback_layout == "markdown"
         assert config.languages == ["zh"]
 
+    def test_channel_config(self):
+        config = ChannelConfig(
+            id="ai-tools",
+            name="信先行·AI工具(内测)",
+            webhook_url="${CHANNEL_AI_TOOLS_WEBHOOK}",
+            content_tags=["ai", "tutorial"],
+            sources=["hackernews", "reddit_artificial"],
+            signal_types=["TUTORIAL", "PRODUCTIVITY_TIP"],
+            min_score=6.0,
+            active=True,
+        )
+        assert config.id == "ai-tools"
+        assert config.webhook_url == "${CHANNEL_AI_TOOLS_WEBHOOK}"
+        assert config.content_tags == ["ai", "tutorial"]
+        assert config.sources == ["hackernews", "reddit_artificial"]
+        assert config.signal_types == ["TUTORIAL", "PRODUCTIVITY_TIP"]
+        assert config.min_score == 6.0
+        assert config.active is True
+
 
 # ── Helper to build a ContentItem for testing ──
 
@@ -1076,6 +1095,186 @@ class TestSendDailySummary:
         assert "[AI变现] AI变现机会" in content
         assert "教程卡片" not in content
         assert "https://xinxianxing.com/2026/04/24/summary-zh.html#item-2" in content
+        del os.environ[_TEST_URL_ENV]
+
+    def test_channel_delivery_filters_by_source_signal_and_score(self):
+        """Active channels receive only matching source/signal/score items."""
+        os.environ[_TEST_URL_ENV] = _TEST_URL
+        config = WebhookConfig(
+            enabled=True,
+            url_env=_TEST_URL_ENV,
+            delivery="summary",
+        )
+        channel = ChannelConfig(
+            id="ai-tools",
+            name="信先行·AI工具(内测)",
+            webhook_url="https://example.com/channel",
+            sources=["reddit_artificial"],
+            signal_types=["TUTORIAL"],
+            min_score=6.0,
+            active=True,
+        )
+        notifier = WebhookNotifier(config, channels=[channel])
+        summarizer = DailySummarizer()
+
+        tutorial = _make_item(title="匹配教程")
+        tutorial.id = "reddit:test:1"
+        tutorial.signal_type = SignalType.TUTORIAL
+        tutorial.metadata["source_id"] = "reddit_artificial"
+
+        wrong_source = _make_item(title="错误信源", url="https://example.com/wrong-source")
+        wrong_source.id = "reddit:test:2"
+        wrong_source.signal_type = SignalType.TUTORIAL
+        wrong_source.metadata["source_id"] = "reddit_promptengineering"
+
+        wrong_signal = _make_item(title="错误类型", url="https://example.com/wrong-signal")
+        wrong_signal.id = "reddit:test:3"
+        wrong_signal.signal_type = SignalType.PRODUCTIVITY_TIP
+        wrong_signal.metadata["source_id"] = "reddit_artificial"
+
+        low_score = _make_item(title="低分内容", url="https://example.com/low", score=5.0)
+        low_score.id = "reddit:test:4"
+        low_score.signal_type = SignalType.TUTORIAL
+        low_score.metadata["source_id"] = "reddit_artificial"
+
+        with (
+            patch.object(notifier, "notify", new_callable=AsyncMock) as mock_notify,
+            patch.object(notifier, "notify_channel_feishu", new_callable=AsyncMock) as mock_channel,
+        ):
+            _run_async(
+                notifier.send_daily_summary(
+                    summary="# 公开摘要",
+                    important_items=[tutorial, wrong_source, wrong_signal, low_score],
+                    all_items_count=20,
+                    date="2026-04-24",
+                    lang="zh",
+                    summarizer=summarizer,
+                )
+            )
+
+            mock_notify.assert_not_called()
+            mock_channel.assert_called_once()
+            sent_channel, body = mock_channel.call_args[0]
+            assert sent_channel.id == "ai-tools"
+            assert body["card"]["header"]["title"]["content"] == "信先行·AI工具(内测) 2026-04-24"
+            content = body["card"]["body"]["elements"][0]["content"]
+            assert "匹配教程" in content
+            assert "[教程]" in content
+            assert "错误信源" not in content
+            assert "错误类型" not in content
+            assert "低分内容" not in content
+            assert "https://xinxianxing.com/2026/04/24/summary-zh.html#item-1" in content
+        del os.environ[_TEST_URL_ENV]
+
+    def test_unresolved_channel_url_falls_back_to_legacy_webhook(self):
+        """Unset channel env placeholders do not disable legacy public delivery."""
+        os.environ[_TEST_URL_ENV] = _TEST_URL
+        config = WebhookConfig(
+            enabled=True,
+            url_env=_TEST_URL_ENV,
+            delivery="summary",
+        )
+        channel = ChannelConfig(
+            id="ai-tools",
+            name="信先行·AI工具(内测)",
+            webhook_url="${CHANNEL_AI_TOOLS_WEBHOOK}",
+            sources=["hackernews"],
+            signal_types=["TUTORIAL"],
+            min_score=6.0,
+            active=True,
+        )
+        notifier = WebhookNotifier(config, channels=[channel])
+        summarizer = DailySummarizer()
+        item = _make_item(title="旧配置仍推送")
+        item.id = "hackernews:test:1"
+        item.signal_type = SignalType.TUTORIAL
+        item.metadata["source_id"] = "hackernews"
+
+        with (
+            patch.object(notifier, "notify", new_callable=AsyncMock) as mock_notify,
+            patch.object(notifier, "notify_channel_feishu", new_callable=AsyncMock) as mock_channel,
+        ):
+            _run_async(
+                notifier.send_daily_summary(
+                    summary="# 公开摘要",
+                    important_items=[item],
+                    all_items_count=5,
+                    date="2026-04-24",
+                    lang="zh",
+                    summarizer=summarizer,
+                )
+            )
+
+            mock_channel.assert_not_called()
+            mock_notify.assert_called_once()
+            variables = mock_notify.call_args[0][0]
+            assert variables["message_title"] == "信先行 2026-04-24 今日精选"
+        del os.environ[_TEST_URL_ENV]
+
+    def test_content_tags_fan_out_to_multiple_partner_channels(self):
+        """One generated item can be delivered to multiple channels sharing tags."""
+        os.environ[_TEST_URL_ENV] = _TEST_URL
+        config = WebhookConfig(
+            enabled=True,
+            url_env=_TEST_URL_ENV,
+            delivery="summary",
+        )
+        partner_a = ChannelConfig(
+            id="ai-tools-partner-a",
+            name="信先行·AI工具(合作方A)",
+            webhook_url="https://example.com/partner-a",
+            content_tags=["ai", "tutorial"],
+            min_score=6.0,
+            active=True,
+        )
+        partner_b = ChannelConfig(
+            id="ai-tools-partner-b",
+            name="信先行·AI工具(合作方B)",
+            webhook_url="https://example.com/partner-b",
+            content_tags=["ai", "tutorial"],
+            min_score=6.0,
+            active=True,
+        )
+        ecommerce = ChannelConfig(
+            id="ecommerce-partner",
+            name="信先行·电商合作群",
+            webhook_url="https://example.com/ecommerce",
+            content_tags=["ecommerce"],
+            min_score=6.0,
+            active=True,
+        )
+        notifier = WebhookNotifier(config, channels=[partner_a, partner_b, ecommerce])
+        summarizer = DailySummarizer()
+
+        item = _make_item(title="同一条教程内容")
+        item.id = "twitter:test:fanout"
+        item.signal_type = SignalType.TUTORIAL
+        item.metadata["source_id"] = "twitter"
+
+        with (
+            patch.object(notifier, "notify", new_callable=AsyncMock) as mock_notify,
+            patch.object(notifier, "notify_channel_feishu", new_callable=AsyncMock) as mock_channel,
+        ):
+            _run_async(
+                notifier.send_daily_summary(
+                    summary="# 公开摘要",
+                    important_items=[item],
+                    all_items_count=1,
+                    date="2026-04-24",
+                    lang="zh",
+                    summarizer=summarizer,
+                )
+            )
+
+            assert mock_channel.call_count == 2
+            sent_ids = [call.args[0].id for call in mock_channel.call_args_list]
+            assert sent_ids == ["ai-tools-partner-a", "ai-tools-partner-b"]
+            for call in mock_channel.call_args_list:
+                body = call.args[1]
+                content = body["card"]["body"]["elements"][0]["content"]
+                assert "同一条教程内容" in content
+                assert "https://xinxianxing.com/2026/04/24/summary-zh.html#item-1" in content
+            mock_notify.assert_called_once()
         del os.environ[_TEST_URL_ENV]
 
     def test_summary_delivery_zh_lang(self):

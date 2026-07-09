@@ -164,7 +164,10 @@ class OpenBBScraper(BaseScraper):
         symbols = self._parse_symbols(raw_symbols) or list(watchlist.symbols)
 
         native_id = self._derive_native_id(url, published)
+        source_id = watchlist.id or self._slug_source_id("openbb", watchlist.name)
         meta = {
+            "source_id": source_id,
+            "source_ids": [source_id, SourceType.OPENBB.value],
             "watchlist": watchlist.name,
             "provider": watchlist.provider,
             "symbols": symbols,

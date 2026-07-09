@@ -2,22 +2,44 @@ name: Daily Xinxianxing Draft
 
 on:
   schedule:
-    # 00:17 UTC = 08:17 Asia/Shanghai. Avoid the top-of-hour Actions rush.
-    - cron: "17 0 * * *"
+    # 22:00 UTC = 06:00 Asia/Shanghai next day. Generate drafts only.
+    - cron: "0 22 * * *"
+    # 00:00 UTC = 08:00 Asia/Shanghai. Push existing drafts to channels.
+    - cron: "0 0 * * *"
   workflow_dispatch:
+    inputs:
+      stage:
+        description: "Which stage to run"
+        required: true
+        default: "both"
+        type: choice
+        options:
+          - both
+          - generate
+          - push
+      run_date:
+        description: "Optional draft date YYYY-MM-DD. Defaults to Asia/Shanghai today."
+        required: false
+        type: string
 
 concurrency:
-  group: daily-xinxianxing-draft
+  group: daily-xinxianxing-${{ github.event_name == 'schedule' && github.event.schedule || inputs.stage || 'manual' }}
   cancel-in-progress: false
 
 jobs:
-  daily-draft:
+  generate-draft:
+    if: >-
+      ${{
+        github.event_name == 'schedule' && github.event.schedule == '0 22 * * *' ||
+        github.event_name == 'workflow_dispatch' && (inputs.stage == 'generate' || inputs.stage == 'both')
+      }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
       deployments: write
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+      TZ: Asia/Shanghai
 
     steps:
       - name: Checkout repository
@@ -39,34 +61,18 @@ jobs:
       - name: Install dependencies
         run: uv sync
 
-      - name: Validate required secrets
+      - name: Validate generation secrets
         env:
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
           APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
-          XINXIANXING_WEBHOOK_URL: ${{ secrets.XINXIANXING_WEBHOOK_URL }}
-          XINXIANXING_PAID_FEISHU_URL: ${{ secrets.XINXIANXING_PAID_FEISHU_URL }}
-          XINXIANXING_TUTORIAL_FEISHU_URL: ${{ secrets.XINXIANXING_TUTORIAL_FEISHU_URL }}
-          XINXIANXING_AI_MONETIZATION_FEISHU_URL: ${{ secrets.XINXIANXING_AI_MONETIZATION_FEISHU_URL }}
-          XINXIANXING_MONEY_CASE_FEISHU_URL: ${{ secrets.XINXIANXING_MONEY_CASE_FEISHU_URL }}
-          XINXIANXING_PRODUCTIVITY_TIP_FEISHU_URL: ${{ secrets.XINXIANXING_PRODUCTIVITY_TIP_FEISHU_URL }}
         run: |
           missing=0
-          for name in DEEPSEEK_API_KEY APIFY_TOKEN XINXIANXING_WEBHOOK_URL; do
+          for name in DEEPSEEK_API_KEY APIFY_TOKEN; do
             if [ -z "${!name}" ]; then
               echo "::error::Missing required GitHub Actions secret: ${name}"
               missing=1
             fi
           done
-
-          if [ -z "${XINXIANXING_PAID_FEISHU_URL}" ]; then
-            echo "::warning::XINXIANXING_PAID_FEISHU_URL is not set; paid Feishu delivery will be skipped."
-          fi
-          for name in XINXIANXING_TUTORIAL_FEISHU_URL XINXIANXING_AI_MONETIZATION_FEISHU_URL XINXIANXING_MONEY_CASE_FEISHU_URL XINXIANXING_PRODUCTIVITY_TIP_FEISHU_URL; do
-            if [ -z "${!name}" ]; then
-              echo "::notice::${name} is not set; that category Feishu delivery will be skipped."
-            fi
-          done
-
           exit "$missing"
 
       - name: Prepare GitHub Actions config
@@ -81,17 +87,19 @@ jobs:
               raise SystemExit("publishing.auto_publish must stay false in GitHub Actions")
           PY
 
-      - name: Run Xinxianxing pipeline
+      - name: Set run date
+        run: |
+          if [ -n "${{ inputs.run_date }}" ]; then
+            echo "RUN_DATE=${{ inputs.run_date }}" >> "$GITHUB_ENV"
+          else
+            echo "RUN_DATE=$(date +'%Y-%m-%d')" >> "$GITHUB_ENV"
+          fi
+
+      - name: Generate Xinxianxing draft
         env:
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
           APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
-          XINXIANXING_WEBHOOK_URL: ${{ secrets.XINXIANXING_WEBHOOK_URL }}
-          XINXIANXING_PAID_FEISHU_URL: ${{ secrets.XINXIANXING_PAID_FEISHU_URL }}
-          XINXIANXING_TUTORIAL_FEISHU_URL: ${{ secrets.XINXIANXING_TUTORIAL_FEISHU_URL }}
-          XINXIANXING_AI_MONETIZATION_FEISHU_URL: ${{ secrets.XINXIANXING_AI_MONETIZATION_FEISHU_URL }}
-          XINXIANXING_MONEY_CASE_FEISHU_URL: ${{ secrets.XINXIANXING_MONEY_CASE_FEISHU_URL }}
-          XINXIANXING_PRODUCTIVITY_TIP_FEISHU_URL: ${{ secrets.XINXIANXING_PRODUCTIVITY_TIP_FEISHU_URL }}
-        run: uv run xinxianxing --hours 24
+        run: uv run horizon --hours 24 --date "$RUN_DATE" --skip-webhook
 
       - name: Ensure published posts were not changed
         run: |
@@ -100,9 +108,6 @@ jobs:
             echo "::error::docs/_posts changed during the automated draft run. Publish posts manually only."
             exit 1
           fi
-
-      - name: Set current date
-        run: echo "DATE=$(date -u +'%Y-%m-%d')" >> "$GITHUB_ENV"
 
       - name: Commit generated drafts and share image
         run: |
@@ -117,7 +122,7 @@ jobs:
             exit 0
           fi
 
-          git commit -m "chore: daily 信先行 draft ${DATE}"
+          git commit -m "chore: daily 信先行 draft ${RUN_DATE}"
           git push
 
       - name: Check Cloudflare deploy secrets
@@ -145,3 +150,89 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: pages deploy dist --project-name=xinxianxing --branch=main
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+
+  push-channels:
+    needs: generate-draft
+    if: >-
+      ${{
+        always() &&
+        (
+          github.event_name == 'schedule' && github.event.schedule == '0 0 * * *' ||
+          github.event_name == 'workflow_dispatch' && (inputs.stage == 'push' || inputs.stage == 'both')
+        ) &&
+        (needs.generate-draft.result == 'success' || needs.generate-draft.result == 'skipped')
+      }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+      TZ: Asia/Shanghai
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Refresh main after draft commit
+        run: |
+          git fetch origin main
+          git checkout main
+          git pull --ff-only origin main
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Prepare GitHub Actions config
+        run: cp data/config.github.json data/config.json
+
+      - name: Set run date
+        run: |
+          if [ -n "${{ inputs.run_date }}" ]; then
+            echo "RUN_DATE=${{ inputs.run_date }}" >> "$GITHUB_ENV"
+          else
+            echo "RUN_DATE=$(date +'%Y-%m-%d')" >> "$GITHUB_ENV"
+          fi
+
+      - name: Validate channel secrets
+        env:
+          CHANNEL_AI_TOOLS_WEBHOOK: ${{ secrets.CHANNEL_AI_TOOLS_WEBHOOK }}
+          CHANNEL_AI_TOOLS_PAID_WEBHOOK: ${{ secrets.CHANNEL_AI_TOOLS_PAID_WEBHOOK }}
+          CHANNEL_AI_TUTORIALS_WEBHOOK: ${{ secrets.CHANNEL_AI_TUTORIALS_WEBHOOK }}
+          CHANNEL_AI_MONETIZATION_WEBHOOK: ${{ secrets.CHANNEL_AI_MONETIZATION_WEBHOOK }}
+          CHANNEL_PRODUCTIVITY_TIPS_WEBHOOK: ${{ secrets.CHANNEL_PRODUCTIVITY_TIPS_WEBHOOK }}
+          CHANNEL_ECOMMERCE_WEBHOOK: ${{ secrets.CHANNEL_ECOMMERCE_WEBHOOK }}
+          HORIZON_ADMIN_WEBHOOK: ${{ secrets.HORIZON_ADMIN_WEBHOOK }}
+        run: |
+          for name in CHANNEL_AI_TOOLS_WEBHOOK CHANNEL_AI_TOOLS_PAID_WEBHOOK CHANNEL_AI_TUTORIALS_WEBHOOK CHANNEL_AI_MONETIZATION_WEBHOOK CHANNEL_PRODUCTIVITY_TIPS_WEBHOOK CHANNEL_ECOMMERCE_WEBHOOK; do
+            if [ -z "${!name}" ]; then
+              echo "::notice::${name} is not set; that channel will be skipped if active."
+            fi
+          done
+          if [ -z "$HORIZON_ADMIN_WEBHOOK" ]; then
+            echo "::warning::HORIZON_ADMIN_WEBHOOK is not set; failed channel pushes cannot send admin alerts."
+          fi
+
+      - name: Push draft to active channels
+        env:
+          XINXIANXING_WEBHOOK_URL: ${{ secrets.XINXIANXING_WEBHOOK_URL }}
+          XINXIANXING_PAID_FEISHU_URL: ${{ secrets.XINXIANXING_PAID_FEISHU_URL }}
+          XINXIANXING_TUTORIAL_FEISHU_URL: ${{ secrets.XINXIANXING_TUTORIAL_FEISHU_URL }}
+          XINXIANXING_AI_MONETIZATION_FEISHU_URL: ${{ secrets.XINXIANXING_AI_MONETIZATION_FEISHU_URL }}
+          XINXIANXING_MONEY_CASE_FEISHU_URL: ${{ secrets.XINXIANXING_MONEY_CASE_FEISHU_URL }}
+          XINXIANXING_PRODUCTIVITY_TIP_FEISHU_URL: ${{ secrets.XINXIANXING_PRODUCTIVITY_TIP_FEISHU_URL }}
+          CHANNEL_AI_TOOLS_WEBHOOK: ${{ secrets.CHANNEL_AI_TOOLS_WEBHOOK }}
+          CHANNEL_AI_TOOLS_PAID_WEBHOOK: ${{ secrets.CHANNEL_AI_TOOLS_PAID_WEBHOOK }}
+          CHANNEL_AI_TUTORIALS_WEBHOOK: ${{ secrets.CHANNEL_AI_TUTORIALS_WEBHOOK }}
+          CHANNEL_AI_MONETIZATION_WEBHOOK: ${{ secrets.CHANNEL_AI_MONETIZATION_WEBHOOK }}
+          CHANNEL_PRODUCTIVITY_TIPS_WEBHOOK: ${{ secrets.CHANNEL_PRODUCTIVITY_TIPS_WEBHOOK }}
+          CHANNEL_ECOMMERCE_WEBHOOK: ${{ secrets.CHANNEL_ECOMMERCE_WEBHOOK }}
+          HORIZON_ADMIN_WEBHOOK: ${{ secrets.HORIZON_ADMIN_WEBHOOK }}
+        run: uv run horizon-channel-push --date "$RUN_DATE" --language zh

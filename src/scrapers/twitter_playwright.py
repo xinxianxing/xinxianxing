@@ -379,6 +379,8 @@ class TwitterPlaywrightScraper(BaseScraper):
                 author=username,
                 published_at=published_at,
                 metadata={
+                    "source_id": self.config.id,
+                    "source_ids": [self.config.id, SourceType.TWITTER.value],
                     "tweet_id": tweet_id,
                     "is_retweet": tweet.get("is_retweet", False),
                     "images": tweet.get("images", []),

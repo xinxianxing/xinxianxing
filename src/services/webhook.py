@@ -12,7 +12,7 @@ from urllib.parse import urlparse
 import httpx
 
 from ..ai.markdown_utils import clean_app_summary_markdown
-from ..models import ContentItem, SignalType, WebhookConfig
+from ..models import ChannelConfig, ContentItem, SignalType, WebhookConfig
 from ..ai.summarizer import DailySummarizer
 
 logger = logging.getLogger(__name__)
@@ -54,6 +54,28 @@ _SIGNAL_TYPE_CONFIG_ALIASES = {
     "MONETIZATION": SignalType.MONEY_CASE,
     "MONEY_CASE": SignalType.MONEY_CASE,
 }
+_SIGNAL_TYPE_CONTENT_TAGS = {
+    SignalType.TUTORIAL: {"tutorial", "教程", "技巧"},
+    SignalType.MONEY_CASE: {"money_case", "money", "monetization", "ai_monetization", "变现", "赚钱案例"},
+    SignalType.PRODUCTIVITY_TIP: {
+        "productivity_tip",
+        "productivity",
+        "efficiency",
+        "效率技巧",
+        "效率",
+    },
+    SignalType.NEWS: {"news", "新闻"},
+    SignalType.TOOL: {"tool", "tools", "工具"},
+    SignalType.TREND: {"trend", "trends", "趋势"},
+    SignalType.CASE: {"case", "案例"},
+    SignalType.DEMAND: {"demand", "需求"},
+    SignalType.POLICY: {"policy", "政策"},
+    SignalType.RESEARCH: {"research", "研究"},
+}
+
+
+class WebhookDeliveryError(RuntimeError):
+    """Raised when a strict webhook delivery detects a failed response."""
 
 
 def _truncate(value: str, limit: int, split: str) -> str:
@@ -243,6 +265,93 @@ def _signal_type_from_config_key(value: object) -> SignalType | None:
         return None
 
 
+def _normalize_content_tag(value: object) -> str:
+    """Normalize one routing tag without losing Chinese tag text."""
+    text = str(value or "").strip().lower()
+    if not text:
+        return ""
+    text = re.sub(r"[#＃]+", "", text)
+    return re.sub(r"[\s\-/、，,]+", "_", text).strip("_")
+
+
+def _expand_content_tag(value: object) -> set[str]:
+    """Return a normalized tag plus useful split variants for compound tags."""
+    normalized = _normalize_content_tag(value)
+    if not normalized:
+        return set()
+    tags = {normalized}
+    for part in normalized.split("_"):
+        if part:
+            tags.add(part)
+    return tags
+
+
+def _source_id_candidates(item: ContentItem) -> set[str]:
+    """Return normalized source ids that can match a channel source filter."""
+    raw_values: list[object] = [
+        item.source_type.value,
+        item.metadata.get("source_id"),
+    ]
+    raw_source_ids = item.metadata.get("source_ids")
+    if isinstance(raw_source_ids, list):
+        raw_values.extend(raw_source_ids)
+
+    subreddit = item.metadata.get("subreddit")
+    if subreddit:
+        raw_values.append(f"reddit_{subreddit}")
+
+    feed_name = item.metadata.get("feed_name")
+    if feed_name:
+        slug = re.sub(r"[^a-z0-9]+", "_", str(feed_name).lower()).strip("_")
+        raw_values.append(f"rss_{slug}" if slug else "rss")
+
+    channel = item.metadata.get("channel")
+    if channel:
+        raw_values.append(f"telegram_{channel}")
+
+    watchlist = item.metadata.get("watchlist")
+    if watchlist:
+        slug = re.sub(r"[^a-z0-9]+", "_", str(watchlist).lower()).strip("_")
+        raw_values.append(f"openbb_{slug}" if slug else "openbb")
+
+    return {str(value).strip().lower() for value in raw_values if str(value or "").strip()}
+
+
+def _content_tag_candidates(item: ContentItem) -> set[str]:
+    """Return normalized content tags available for channel fan-out."""
+    raw_values: list[object] = []
+    raw_values.extend(item.ai_tags or [])
+    raw_values.extend(item.suitable_for or [])
+
+    for key in ("content_tags", "tags", "category"):
+        value = item.metadata.get(key)
+        if isinstance(value, list):
+            raw_values.extend(value)
+        elif value:
+            raw_values.append(value)
+
+    action_card = item.metadata.get("action_card")
+    if isinstance(action_card, dict):
+        for key in ("content_tags", "tags", "suitable_for", "signal_type"):
+            value = action_card.get(key)
+            if isinstance(value, list):
+                raw_values.extend(value)
+            elif value:
+                raw_values.append(value)
+
+    signal = item.signal_type or item.metadata.get("signal_type")
+    if not isinstance(signal, SignalType):
+        signal = _signal_type_from_config_key(signal)
+    if isinstance(signal, SignalType):
+        raw_values.append(signal.value)
+        raw_values.extend(_SIGNAL_TYPE_CONTENT_TAGS.get(signal, set()))
+
+    tags: set[str] = set()
+    for value in raw_values:
+        tags.update(_expand_content_tag(value))
+    return tags
+
+
 def _site_config_value(key: str) -> str:
     """Read a simple scalar key from docs/_config.yml without a YAML dependency."""
     config_path = Path("docs/_config.yml")
@@ -368,6 +477,92 @@ def redact_headers(headers: dict[str, str]) -> dict[str, str]:
     }
 
 
+def build_admin_alert_card(
+    *,
+    channel_id: str,
+    channel_name: str,
+    reason: str,
+    failed_at: datetime | None = None,
+) -> dict[str, Any]:
+    """Build a compact Feishu card for system failure alerts."""
+    failed_at = failed_at or datetime.now(timezone.utc)
+    content = "\n".join(
+        [
+            f"**频道**: {channel_name} (`{channel_id}`)",
+            f"**失败原因**: {reason}",
+            f"**失败时间**: {failed_at.isoformat()}",
+        ]
+    )
+    return {
+        "msg_type": "interactive",
+        "card": {
+            "schema": "2.0",
+            "config": {
+                "wide_screen_mode": True,
+                "update_multi": True,
+            },
+            "header": {
+                "title": {
+                    "tag": "plain_text",
+                    "content": "信先行频道推送失败",
+                },
+                "template": "red",
+            },
+            "body": {
+                "elements": [_markdown(content)],
+            },
+        },
+    }
+
+
+async def send_admin_alert(
+    admin_webhook_url: str | None,
+    *,
+    channel_id: str,
+    channel_name: str,
+    reason: str,
+    failed_at: datetime | None = None,
+) -> bool:
+    """Send one channel-delivery failure alert to the admin webhook."""
+    if _is_blank_or_unresolved_env_ref(admin_webhook_url):
+        logger.warning(
+            "HORIZON_ADMIN_WEBHOOK is not configured; cannot alert channel failure for %s.",
+            channel_id,
+        )
+        return False
+
+    url = str(admin_webhook_url).strip()
+    safe_url = redact_url(url)
+    body = json.dumps(
+        build_admin_alert_card(
+            channel_id=channel_id,
+            channel_name=channel_name,
+            reason=reason,
+            failed_at=failed_at,
+        ),
+        ensure_ascii=False,
+    )
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                url,
+                content=body.encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+            )
+        if 200 <= response.status_code < 300:
+            logger.info("Admin alert sent OK. URL: %s, body: %s", safe_url, response.text[:500])
+            return True
+        logger.error(
+            "Admin alert failed: URL=%s, status=%d, body=%s",
+            safe_url,
+            response.status_code,
+            response.text[:500],
+        )
+    except Exception as exc:
+        logger.error("Admin alert failed: URL=%s, error=%s", safe_url, exc)
+    return False
+
+
 class WebhookNotifier:
     """Sends webhook notifications after pipeline completion or failure."""
 
@@ -377,8 +572,10 @@ class WebhookNotifier:
         console=None,
         site_base_url: str | None = None,
         draft_preview_links: bool = False,
+        channels: list[ChannelConfig] | None = None,
     ):
         self.config = config
+        self.channels = channels or []
         self.site_base_url = _normalize_site_base_url(site_base_url) or _site_base_url()
         self.draft_preview_links = draft_preview_links
         if console is None:
@@ -398,9 +595,11 @@ class WebhookNotifier:
         self.url = None
         self.paid_feishu_url = None
         self.category_feishu_urls: dict[SignalType, str] = {}
+        self.channel_webhook_urls: dict[str, str] = {}
         self._validate_config()  # sets self.url or raises ValueError
         self._validate_paid_feishu_url()
         self._validate_category_feishu_urls()
+        self._validate_channel_webhook_urls()
 
     def _item_page_url(self, date: str, lang: str, index: int) -> str:
         """Build this notifier's configured public page URL for one card."""
@@ -533,6 +732,30 @@ class WebhookNotifier:
                 self.console.print(
                     "[yellow]Category Feishu webhook URL is invalid; "
                     f"skipping {signal.value}: {exc}[/yellow]"
+                )
+
+    def _validate_channel_webhook_urls(self) -> None:
+        """Validate optional multi-channel Feishu webhook URLs."""
+        for channel in self.channels:
+            if not channel.active:
+                continue
+            if _is_blank_or_unresolved_env_ref(channel.webhook_url):
+                continue
+
+            try:
+                self.channel_webhook_urls[channel.id] = self._validate_url(
+                    str(channel.webhook_url),
+                    source_label=f"channels.{channel.id}.webhook_url",
+                )
+            except ValueError as exc:
+                logger.warning(
+                    "Invalid channel webhook URL for %s; skipping channel: %s",
+                    channel.id,
+                    exc,
+                )
+                self.console.print(
+                    "[yellow]Channel webhook URL is invalid; "
+                    f"skipping {channel.id}: {exc}[/yellow]"
                 )
 
     def _render_request_components(
@@ -912,6 +1135,199 @@ class WebhookNotifier:
 
         return messages
 
+    def _item_score_value(self, item: ContentItem) -> float | None:
+        """Return the numeric score used for channel filtering."""
+        raw_score = (
+            item.utility_score
+            if item.utility_score is not None
+            else item.score
+            if item.score is not None
+            else item.ai_score
+        )
+        if raw_score is None:
+            return None
+        try:
+            return float(raw_score)
+        except (TypeError, ValueError):
+            return None
+
+    def _channel_signal_types(self, channel: ChannelConfig) -> set[SignalType]:
+        """Normalize channel signal type config, accepting product aliases."""
+        signals: set[SignalType] = set()
+        for raw_signal in channel.signal_types:
+            signal = _signal_type_from_config_key(raw_signal)
+            if signal is not None:
+                signals.add(signal)
+        return signals
+
+    def _channel_content_tags(self, channel: ChannelConfig) -> set[str]:
+        """Normalize channel content tag config."""
+        tags: set[str] = set()
+        for raw_tag in channel.content_tags:
+            tags.update(_expand_content_tag(raw_tag))
+        return tags
+
+    def _item_matches_channel(
+        self,
+        item: ContentItem,
+        channel: ChannelConfig,
+    ) -> bool:
+        """Return whether an item belongs in a configured channel."""
+        score = self._item_score_value(item)
+        if score is None or score < channel.min_score:
+            return False
+
+        channel_sources = {
+            source.strip().lower()
+            for source in channel.sources
+            if source.strip()
+        }
+        if channel_sources and _source_id_candidates(item).isdisjoint(channel_sources):
+            return False
+
+        channel_signals = self._channel_signal_types(channel)
+        if channel_signals:
+            signal = self._item_signal_type(item)
+            if signal not in channel_signals:
+                return False
+
+        channel_tags = self._channel_content_tags(channel)
+        if channel_tags and _content_tag_candidates(item).isdisjoint(channel_tags):
+            return False
+
+        return True
+
+    def _build_channel_feishu_summary(
+        self,
+        channel: ChannelConfig,
+        indexed_items: list[tuple[int, ContentItem]],
+        date: str,
+        lang: str,
+    ) -> str:
+        """Build one channel-specific Feishu card body."""
+        link_label = "查看完整内容" if lang == "zh" else "Read full card"
+        if lang == "zh":
+            lines = [
+                f"# {channel.name} - {date}",
+                "",
+                f"{len(indexed_items)} 条符合频道规则的内容。",
+            ]
+        else:
+            lines = [
+                f"# {channel.name} - {date}",
+                "",
+                f"{len(indexed_items)} items matched this channel.",
+            ]
+
+        for display_index, (page_index, item) in enumerate(indexed_items, start=1):
+            title = self._item_title(item, lang)
+            category = self._item_signal_label(item, lang)
+            score = self._item_score_label(item)
+            link = self._item_page_url(date, lang, page_index)
+            lines.extend(
+                [
+                    "",
+                    f"{display_index}. **[{category}] {title}**",
+                    f"Score {score} · [{link_label}]({link})",
+                ]
+            )
+        return "\n".join(lines)
+
+    def _channel_candidate_items(
+        self,
+        channel: ChannelConfig,
+        important_items: List[ContentItem],
+        paid_items: Optional[List[ContentItem]],
+    ) -> list[tuple[int, ContentItem]]:
+        """Choose and filter candidate items for one channel.
+
+        The migrated paid channel keeps using the broader paid candidate set.
+        Other channels use the public page-backed items so their links resolve
+        to visible cards in the generated daily draft.
+        """
+        page_index_by_id = {
+            item.id: index for index, item in enumerate(important_items, start=1)
+        }
+        candidate_items = (
+            paid_items
+            if channel.id in {"paid", "ai-tools-paid"} and paid_items is not None
+            else important_items
+        )
+
+        indexed_items: list[tuple[int, ContentItem]] = []
+        for fallback_index, item in enumerate(candidate_items, start=1):
+            if not self._item_matches_channel(item, channel):
+                continue
+            indexed_items.append((page_index_by_id.get(item.id, fallback_index), item))
+
+        indexed_items.sort(
+            key=lambda pair: self._item_score_value(pair[1]) or 0,
+            reverse=True,
+        )
+        return indexed_items
+
+    def build_channel_feishu_messages(
+        self,
+        important_items: List[ContentItem],
+        paid_items: Optional[List[ContentItem]],
+        date: str,
+        lang: str,
+    ) -> list[tuple[ChannelConfig, dict[str, Any]]]:
+        """Build Feishu messages for active configured channels."""
+        if not self.channel_webhook_urls:
+            return []
+
+        messages: list[tuple[ChannelConfig, dict[str, Any]]] = []
+        for channel in self.channels:
+            if not channel.active or channel.id not in self.channel_webhook_urls:
+                continue
+            indexed_items = self._channel_candidate_items(
+                channel,
+                important_items=important_items,
+                paid_items=paid_items,
+            )
+            if not indexed_items:
+                continue
+
+            title = f"{channel.name} {date}"
+            content = self._build_channel_feishu_summary(
+                channel=channel,
+                indexed_items=indexed_items,
+                date=date,
+                lang=lang,
+            )
+            messages.append(
+                (
+                    channel,
+                    self._build_paid_feishu_card(
+                        title[:80],
+                        content,
+                        template="blue",
+                    ),
+                )
+            )
+
+        return messages
+
+    def _configured_channel_ids(self) -> set[str]:
+        """Return ids for active channels with valid webhook URLs."""
+        return {
+            channel.id
+            for channel in self.channels
+            if channel.active and channel.id in self.channel_webhook_urls
+        }
+
+    def _signals_replaced_by_channels(self) -> set[SignalType]:
+        """Return legacy category signals covered by active channel URLs."""
+        signals: set[SignalType] = set()
+        for channel in self.channels:
+            if not channel.active or channel.id not in self.channel_webhook_urls:
+                continue
+            if channel.id in {"public", "ai-tools", "paid", "ai-tools-paid"}:
+                continue
+            signals.update(self._channel_signal_types(channel))
+        return signals
+
     def build_preview(self, variables: dict) -> dict[str, Any]:
         """Build the fully rendered request for dry-run preview."""
         request_url, body_content, headers = self._render_request_components(variables)
@@ -1109,10 +1525,12 @@ class WebhookNotifier:
         request_url: str | None,
         body: dict[str, Any],
         channel_label: str,
-    ) -> None:
+        *,
+        raise_on_error: bool = False,
+    ) -> bool:
         """Send one pre-rendered Feishu card to a direct bot URL."""
         if not self.config.enabled or not request_url:
-            return
+            return False
 
         safe_url = redact_url(request_url)
         body_content = json.dumps(body, ensure_ascii=False)
@@ -1126,12 +1544,21 @@ class WebhookNotifier:
                     headers=headers,
                 )
 
-            self._handle_response_status(response, safe_url)
+            error = self._handle_response_status(response, safe_url)
+            if error:
+                if raise_on_error:
+                    raise WebhookDeliveryError(error)
+                return False
+            return True
 
         except httpx.InvalidURL as e:
+            message = f"{channel_label} Feishu webhook URL is invalid: {e}"
             self.console.print(f"[red]{channel_label} Feishu webhook URL is invalid: {e}[/red]")
             logger.error("%s Feishu webhook URL invalid: %s", channel_label, e)
+            if raise_on_error:
+                raise WebhookDeliveryError(message) from e
         except httpx.ConnectError as e:
+            message = f"{channel_label} Feishu webhook connection failed: {e}"
             self.console.print(f"[red]{channel_label} Feishu webhook connection failed: {e}[/red]")
             logger.error(
                 "%s Feishu webhook connection failed: URL=%s, error=%s",
@@ -1139,10 +1566,16 @@ class WebhookNotifier:
                 safe_url,
                 e,
             )
+            if raise_on_error:
+                raise WebhookDeliveryError(message) from e
         except httpx.TimeoutException as e:
+            message = f"{channel_label} Feishu webhook request timed out: {e}"
             self.console.print(f"[red]{channel_label} Feishu webhook request timed out: {e}[/red]")
             logger.error("%s Feishu webhook timeout: URL=%s, error=%s", channel_label, safe_url, e)
+            if raise_on_error:
+                raise WebhookDeliveryError(message) from e
         except Exception as e:
+            message = f"{channel_label} Feishu webhook failed unexpectedly: {type(e).__name__}: {e}"
             self.console.print(
                 f"[red]{channel_label} Feishu webhook failed unexpectedly: {type(e).__name__}: {e}[/red]"
             )
@@ -1153,6 +1586,9 @@ class WebhookNotifier:
                 type(e).__name__,
                 e,
             )
+            if raise_on_error:
+                raise WebhookDeliveryError(message) from e
+        return False
 
     async def notify_paid_feishu(self, body: dict[str, Any]) -> None:
         """Send one paid-channel Feishu message."""
@@ -1162,6 +1598,22 @@ class WebhookNotifier:
         """Send one category-channel Feishu message."""
         request_url = self.category_feishu_urls.get(signal)
         await self._post_direct_feishu(request_url, body, f"Category {signal.value}")
+
+    async def notify_channel_feishu(
+        self,
+        channel: ChannelConfig,
+        body: dict[str, Any],
+        *,
+        raise_on_error: bool = False,
+    ) -> bool:
+        """Send one configured channel Feishu message."""
+        request_url = self.channel_webhook_urls.get(channel.id)
+        return await self._post_direct_feishu(
+            request_url,
+            body,
+            f"Channel {channel.id}",
+            raise_on_error=raise_on_error,
+        )
 
     def _check_body_error_code(self, body: str) -> Optional[str]:
         """Check if a 2xx response body contains a platform-specific error code.
@@ -1201,7 +1653,7 @@ class WebhookNotifier:
 
         return None
 
-    def _handle_response_status(self, response: httpx.Response, safe_url: str) -> None:
+    def _handle_response_status(self, response: httpx.Response, safe_url: str) -> str | None:
         """Log and display HTTP response status by category.
 
         Even 2xx responses may contain platform-specific error codes
@@ -1222,12 +1674,13 @@ class WebhookNotifier:
                     f"[yellow]Webhook response (status={status}): {body}[/yellow]\n"
                     f"[yellow]{error_hint}[/yellow]"
                 )
+                return error_hint
             else:
                 logger.info("Webhook sent OK. URL: %s, body: %s", safe_url, body)
                 self.console.print(
                     f"[green]Webhook response (status={status}): {body}[/green]"
                 )
-            return
+            return None
 
         if 300 <= status < 400:
             location = response.headers.get("location", "")
@@ -1238,6 +1691,7 @@ class WebhookNotifier:
                 "Webhook redirect: URL=%s, status=%d, location=%s",
                 safe_url, status, location,
             )
+            return f"Webhook redirect status={status}: {location}"
         elif 400 <= status < 500:
             self.console.print(
                 f"[red]Webhook client error (status={status}): {response.text[:500]}[/red]"
@@ -1246,6 +1700,7 @@ class WebhookNotifier:
                 "Webhook client error: URL=%s, status=%d, body=%s",
                 safe_url, status, response.text[:500],
             )
+            return f"Webhook client error status={status}: {response.text[:500]}"
         elif 500 <= status < 600:
             self.console.print(
                 f"[red]Webhook server error (status={status}): {response.text[:500]}[/red]"
@@ -1254,11 +1709,13 @@ class WebhookNotifier:
                 "Webhook server error: URL=%s, status=%d, body=%s",
                 safe_url, status, response.text[:500],
             )
+            return f"Webhook server error status={status}: {response.text[:500]}"
         else:
             self.console.print(
                 f"[red]Webhook unexpected status={status}: {response.text[:500]}[/red]"
             )
             logger.error("Webhook unexpected status: URL=%s, status=%d", safe_url, status)
+            return f"Webhook unexpected status={status}: {response.text[:500]}"
 
     async def send_daily_summary(
         self,
@@ -1286,43 +1743,66 @@ class WebhookNotifier:
             paid_items: All score-qualified items for paid-user concise delivery
             score_threshold: Score threshold used to select paid_items
         """
-        messages = self.build_daily_summary_messages(
-            summary=summary,
+        channel_messages = self.build_channel_feishu_messages(
             important_items=important_items,
-            all_items_count=all_items_count,
+            paid_items=paid_items,
             date=date,
             lang=lang,
-            summarizer=summarizer,
         )
-        if not messages:
-            self.console.print(
-                f"🔕 Skipping {lang.upper()} webhook notification "
-                f"(filtered by webhook.languages)"
+        configured_channel_ids = self._configured_channel_ids()
+        if channel_messages:
+            self.console.print(f"🧭 Sending {lang.upper()} channel Feishu notifications...")
+            for channel, message in channel_messages:
+                await self.notify_channel_feishu(channel, message)
+
+        public_replaced = bool(configured_channel_ids & {"public", "ai-tools"})
+        if not public_replaced:
+            messages = self.build_daily_summary_messages(
+                summary=summary,
+                important_items=important_items,
+                all_items_count=all_items_count,
+                date=date,
+                lang=lang,
+                summarizer=summarizer,
             )
-            return
+            if not messages:
+                self.console.print(
+                    f"🔕 Skipping {lang.upper()} webhook notification "
+                    f"(filtered by webhook.languages)"
+                )
+                return
 
-        self.console.print(f"🔔 Sending {lang.upper()} webhook notification...")
-        for message in messages:
-            await self.notify(message)
+            self.console.print(f"🔔 Sending {lang.upper()} webhook notification...")
+            for message in messages:
+                await self.notify(message)
 
-        paid_messages = self.build_paid_feishu_messages(
-            paid_items=paid_items if paid_items is not None else important_items,
-            all_items_count=all_items_count,
-            date=date,
-            lang=lang,
-            summarizer=summarizer,
-            score_threshold=score_threshold,
-        )
-        if paid_messages:
-            self.console.print(f"🔐 Sending {lang.upper()} paid Feishu webhook notification...")
-            for message in paid_messages:
-                await self.notify_paid_feishu(message)
+        paid_replaced = bool(configured_channel_ids & {"paid", "ai-tools-paid"})
+        if not paid_replaced:
+            paid_messages = self.build_paid_feishu_messages(
+                paid_items=paid_items if paid_items is not None else important_items,
+                all_items_count=all_items_count,
+                date=date,
+                lang=lang,
+                summarizer=summarizer,
+                score_threshold=score_threshold,
+            )
+            if paid_messages:
+                self.console.print(f"🔐 Sending {lang.upper()} paid Feishu webhook notification...")
+                for message in paid_messages:
+                    await self.notify_paid_feishu(message)
 
         category_messages = self.build_category_feishu_messages(
             important_items=important_items,
             date=date,
             lang=lang,
         )
+        replaced_signals = self._signals_replaced_by_channels()
+        if replaced_signals:
+            category_messages = [
+                (signal, message)
+                for signal, message in category_messages
+                if signal not in replaced_signals
+            ]
         if category_messages:
             self.console.print(f"🗂️ Sending {lang.upper()} category Feishu webhook notifications...")
             for signal, message in category_messages:

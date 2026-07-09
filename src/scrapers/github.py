@@ -57,11 +57,11 @@ class GitHubScraper(BaseScraper):
                 continue
 
             if source.type == "user_events" and source.username:
-                user_items = await self._fetch_user_events(source.username, since)
+                user_items = await self._fetch_user_events(source, since)
                 items.extend(user_items)
             elif source.type == "repo_releases" and source.owner and source.repo:
                 release_items = await self._fetch_repo_releases(
-                    source.owner, source.repo, since
+                    source, since
                 )
                 items.extend(release_items)
 
@@ -69,7 +69,7 @@ class GitHubScraper(BaseScraper):
 
     async def _fetch_user_events(
         self,
-        username: str,
+        source: GitHubSourceConfig,
         since: datetime
     ) -> List[ContentItem]:
         """Fetch public events for a user.
@@ -81,6 +81,8 @@ class GitHubScraper(BaseScraper):
         Returns:
             List[ContentItem]: Event content items
         """
+        username = source.username or ""
+        source_id = source.id or self._slug_source_id("github_user", username)
         url = f"{self.base_url}/users/{username}/events/public"
         items = []
 
@@ -105,7 +107,7 @@ class GitHubScraper(BaseScraper):
                 ]:
                     continue
 
-                item = self._parse_event(event, username)
+                item = self._parse_event(event, username, source_id)
                 if item:
                     items.append(item)
 
@@ -114,7 +116,9 @@ class GitHubScraper(BaseScraper):
 
         return items
 
-    def _parse_event(self, event: dict, username: str) -> Optional[ContentItem]:
+    def _parse_event(
+        self, event: dict, username: str, source_id: str
+    ) -> Optional[ContentItem]:
         """Parse GitHub event into ContentItem.
 
         Args:
@@ -163,6 +167,8 @@ class GitHubScraper(BaseScraper):
             author=username,
             published_at=created_at,
             metadata={
+                "source_id": source_id,
+                "source_ids": [source_id, SourceType.GITHUB.value],
                 "event_type": event_type,
                 "repo": repo_name,
             }
@@ -170,8 +176,7 @@ class GitHubScraper(BaseScraper):
 
     async def _fetch_repo_releases(
         self,
-        owner: str,
-        repo: str,
+        source: GitHubSourceConfig,
         since: datetime
     ) -> List[ContentItem]:
         """Fetch releases for a repository.
@@ -184,6 +189,9 @@ class GitHubScraper(BaseScraper):
         Returns:
             List[ContentItem]: Release content items
         """
+        owner = source.owner or ""
+        repo = source.repo or ""
+        source_id = source.id or self._slug_source_id("github_repo", f"{owner}_{repo}")
         url = f"{self.base_url}/repos/{owner}/{repo}/releases"
         items = []
 
@@ -209,6 +217,8 @@ class GitHubScraper(BaseScraper):
                     author=release["author"]["login"],
                     published_at=published_at,
                     metadata={
+                        "source_id": source_id,
+                        "source_ids": [source_id, SourceType.GITHUB.value],
                         "repo": f"{owner}/{repo}",
                         "tag": release["tag_name"],
                         "prerelease": release.get("prerelease", False),

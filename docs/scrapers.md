@@ -7,6 +7,12 @@ title: Source Scrapers
 
 信先行 fetches content from multiple source types. All scrapers inherit from `BaseScraper`, share an async HTTP client, and implement a `fetch(since)` method that returns a list of `ContentItem` objects. Sources are fetched concurrently via `asyncio.gather`.
 
+Every configured source can expose a stable `id` used by `channels[].sources`
+for multi-group routing. If an `id` is omitted, scrapers derive one from the
+source type and name, such as `hackernews`, `twitter`, `reddit_artificial`, or
+`rss_simon_willison`. Each fetched `ContentItem` stores this in
+`metadata.source_id` and `metadata.source_ids`.
+
 ## Hacker News
 
 **File**: `src/scrapers/hackernews.py`
@@ -22,6 +28,7 @@ Stories and their comments are fetched concurrently. For each story, the top 5 c
 
 ```json
 {
+  "id": "hackernews",
   "enabled": true,
   "fetch_top_stories": 30,
   "min_score": 100
@@ -51,6 +58,7 @@ Two source types are supported:
 
 ```json
 {
+  "id": "github_torvalds",
   "type": "user_events",
   "username": "torvalds",
   "enabled": true
@@ -59,6 +67,7 @@ Two source types are supported:
 
 ```json
 {
+  "id": "github_go_releases",
   "type": "repo_releases",
   "owner": "golang",
   "repo": "go",
@@ -78,6 +87,7 @@ Fetches any Atom/RSS feed using the `feedparser` library. Tries multiple date fi
 
 ```json
 {
+  "id": "simon_willison",
   "name": "Simon Willison",
   "url": "https://simonwillison.net/atom/everything/",
   "enabled": true,
@@ -112,6 +122,7 @@ Subreddits and users are fetched concurrently. Comments are sorted by score, lim
   "fetch_comments": 5,
   "subreddits": [
     {
+      "id": "reddit_machinelearning",
       "subreddit": "MachineLearning",
       "sort": "hot",
       "fetch_limit": 25,
@@ -120,6 +131,7 @@ Subreddits and users are fetched concurrently. Comments are sorted by score, lim
   ],
   "users": [
     {
+      "id": "reddit_user_spez",
       "username": "spez",
       "sort": "new",
       "fetch_limit": 10
@@ -194,6 +206,7 @@ Flow:
 
 ```json
 {
+  "id": "twitter",
   "enabled": true,
   "mode": "apify",
   "users": ["karpathy", "ylecun"],

@@ -2,6 +2,7 @@
 
 from abc import ABC, abstractmethod
 from datetime import datetime
+import re
 from typing import List
 import httpx
 
@@ -45,3 +46,9 @@ class BaseScraper(ABC):
             str: Unique ID in format {source}:{subtype}:{native_id}
         """
         return f"{source_type}:{subtype}:{native_id}"
+
+    @staticmethod
+    def _slug_source_id(prefix: str, value: str) -> str:
+        """Build a stable source id from a human-readable source label."""
+        slug = re.sub(r"[^a-z0-9]+", "_", value.lower()).strip("_")
+        return f"{prefix}_{slug}" if slug else prefix
