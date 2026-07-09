@@ -625,6 +625,16 @@ subscriptions, optional signal types, score threshold, and active switch:
 {
   "channels": [
     {
+      "id": "review",
+      "name": "信先行·内容审核群",
+      "webhook_url": "${CHANNEL_REVIEW_WEBHOOK}",
+      "content_tags": [],
+      "sources": [],
+      "signal_types": [],
+      "min_score": 0.0,
+      "active": true
+    },
+    {
       "id": "ai-tools",
       "name": "信先行·AI工具(内测)",
       "webhook_url": "${CHANNEL_AI_TOOLS_WEBHOOK}",
@@ -671,6 +681,12 @@ subscriptions, optional signal types, score threshold, and active switch:
   is accepted as an alias for `MONEY_CASE`.
 - `min_score`: Minimum score for this channel.
 - `active`: Set `false` to pause a channel without deleting its configuration.
+
+The bundled `review` channel is intentionally broad: empty `content_tags`,
+`sources`, and `signal_types` mean no routing filter, and `min_score: 0.0`
+means every generated Action Card is pushed to the review group. In GitHub
+Actions it is pushed right after the 06:00 draft generation/deploy stage, then
+excluded from the 08:00 formal channel push to avoid duplicate review messages.
 
 Active channels replace only their matching legacy target to avoid duplicate
 pushes during migration: `ai-tools` replaces the legacy public group,
@@ -841,9 +857,12 @@ With this layout, 信先行 sends one interactive card containing the overview a
 
 - `0 22 * * *` UTC = 06:00 Asia/Shanghai next day: generate the draft with
   `uv run horizon --hours 24 --skip-webhook`, commit review artifacts, and
-  deploy the preview site when Cloudflare credentials are configured.
+  deploy the preview site when Cloudflare credentials are configured. After
+  deployment it pushes only the `review` channel with
+  `uv run horizon-channel-push --channel-id review`.
 - `0 0 * * *` UTC = 08:00 Asia/Shanghai: read the existing daily draft and
-  push it to every matching active channel with `uv run horizon-channel-push`.
+  push it to every matching active formal channel with
+  `uv run horizon-channel-push --exclude-channel-id review`.
 
 The workflow uses `data/config.github.json`, maps runtime secrets from GitHub
 Actions Secrets, and commits generated review artifacts:
@@ -864,6 +883,7 @@ Required GitHub Actions Secrets for the generation stage:
 
 Required or recommended GitHub Actions Secrets for channel delivery:
 
+- `CHANNEL_REVIEW_WEBHOOK`: Feishu/Lark bot URL for the internal content review group.
 - `CHANNEL_AI_TOOLS_WEBHOOK`: Feishu/Lark bot URL for the migrated free AI tools group.
 - `CHANNEL_AI_TOOLS_PAID_WEBHOOK`: Feishu/Lark bot URL for the migrated paid AI tools group.
 - `CHANNEL_AI_TUTORIALS_WEBHOOK`: Feishu/Lark bot URL for the AI tutorial group.
