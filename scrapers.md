@@ -7,8 +7,8 @@ title: Source Scrapers
 
 信先行 fetches content from multiple source types. All scrapers inherit from `BaseScraper`, share an async HTTP client, and implement a `fetch(since)` method that returns a list of `ContentItem` objects. Sources are fetched concurrently via `asyncio.gather`.
 
-Every configured source can expose a stable `id` used by `channels[].sources`
-for multi-group routing. If an `id` is omitted, scrapers derive one from the
+Every configured source can expose a stable `id` used by the `sources` field in
+`config/channels/*.json` for multi-group routing. If an `id` is omitted, scrapers derive one from the
 source type and name, such as `hackernews`, `twitter`, `reddit_artificial`, or
 `rss_simon_willison`. Each fetched `ContentItem` stores this in
 `metadata.source_id` and `metadata.source_ids`.
