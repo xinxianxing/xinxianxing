@@ -7,7 +7,7 @@ import argparse
 from dotenv import load_dotenv
 from rich.console import Console
 
-from .channel_registry import check_channel
+from .channel_registry import LEGACY_SECRET_ALIASES, check_channel
 
 
 console = Console()
@@ -27,6 +27,9 @@ def print_check_result(channel_id: str) -> int:
         console.print("缺失配置：")
         for item in missing:
             console.print(f"- {item}")
+            aliases = LEGACY_SECRET_ALIASES.get(item, ())
+            if aliases:
+                console.print(f"  可复用旧 Secret：{', '.join(aliases)}")
     else:
         console.print("[green]配置检查通过[/green]")
 
