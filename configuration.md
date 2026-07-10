@@ -641,7 +641,7 @@ Example channel file:
   "template_type": "action_card",
   "free_webhook_secret_name": "CHANNEL_AI_TOOLS_PARTNER_001_FREE_WEBHOOK",
   "paid_webhook_secret_name": "CHANNEL_AI_TOOLS_PARTNER_001_PAID_WEBHOOK",
-  "admin_webhook_secret_name": "HORIZON_ADMIN_WEBHOOK",
+  "admin_webhook_secret_name": "XINXIANXING_ADMIN_WEBHOOK",
   "sources": ["hackernews", "reddit_artificial", "twitter"],
   "signal_types": ["TUTORIAL", "PRODUCTIVITY_TIP", "MONEY_CASE"],
   "schedule": "daily_8am",
@@ -659,7 +659,7 @@ Example channel file:
 - `category`: Business category such as `ai_tools`, `ai_monetization`, `productivity_tips`, `ecommerce`, or `review`.
 - `template_type`: Currently `action_card`.
 - `free_webhook_secret_name` / `paid_webhook_secret_name`: Secret names only, never real webhook URLs. The naming convention is `CHANNEL_<CHANNEL_ID uppercase>_FREE_WEBHOOK` and `CHANNEL_<CHANNEL_ID uppercase>_PAID_WEBHOOK`.
-- `admin_webhook_secret_name`: Usually `HORIZON_ADMIN_WEBHOOK`.
+- `admin_webhook_secret_name`: Usually `XINXIANXING_ADMIN_WEBHOOK`.
 - `sources`: Source ids this channel subscribes to. Source configs can define an explicit `id`; otherwise scrapers derive ids such as `hackernews`, `twitter`, `reddit_artificial`, or `rss_product_hunt_ai`.
 - `signal_types`: Action Card types allowed in this channel. `AI_MONETIZATION` is accepted as an alias for `MONEY_CASE`.
 - `schedule`: Currently `daily_8am`.
@@ -677,18 +677,18 @@ excluded from the 08:00 formal channel push to avoid duplicate review messages.
 Use the helper commands:
 
 ```bash
-uv run horizon-channel-add --channel-id ai_tools_partner_001 --name "信先行·AI工具日报" --partner "某某合作方" --category ai_tools --template action_card --schedule daily_8am --max-items 10 --min-score 7 --active false
-uv run horizon-channel-check --channel-id ai_tools_partner_001
-uv run horizon-channel-test --channel-id ai_tools_partner_001
-uv run horizon-channel-enable --channel-id ai_tools_partner_001
-uv run horizon-channel-disable --channel-id ai_tools_partner_001
+uv run xinxianxing-channel-add --channel-id ai_tools_partner_001 --name "信先行·AI工具日报" --partner "某某合作方" --category ai_tools --template action_card --schedule daily_8am --max-items 10 --min-score 7 --active false
+uv run xinxianxing-channel-check --channel-id ai_tools_partner_001
+uv run xinxianxing-channel-test --channel-id ai_tools_partner_001
+uv run xinxianxing-channel-enable --channel-id ai_tools_partner_001
+uv run xinxianxing-channel-disable --channel-id ai_tools_partner_001
 ```
 
 To push an already-generated draft to active channels without re-running
 scraping or AI analysis:
 
 ```bash
-uv run horizon-channel-push --date 2026-07-09 --language zh
+uv run xinxianxing-channel-push --date 2026-07-09 --language zh
 ```
 
 ### Delivery Modes And Layouts
@@ -839,13 +839,13 @@ With this layout, 信先行 sends one interactive card containing the overview a
 `.github/workflows/daily-summary.yml` runs in two daily stages:
 
 - `0 22 * * *` UTC = 06:00 Asia/Shanghai next day: generate the draft with
-  `uv run horizon --hours 24 --skip-webhook`, commit review artifacts, and
+  `uv run xinxianxing --hours 24 --skip-webhook`, commit review artifacts, and
   deploy the preview site when Cloudflare credentials are configured. After
   deployment it pushes only the `review` channel with
-  `uv run horizon-channel-push --channel-id review`.
+  `uv run xinxianxing-channel-push --channel-id review`.
 - `0 0 * * *` UTC = 08:00 Asia/Shanghai: read the existing daily draft and
   push it to every matching active formal channel with
-  `uv run horizon-channel-push --exclude-channel-id review`.
+  `uv run xinxianxing-channel-push --exclude-channel-id review`.
 
 The workflow uses `data/config.github.json`, maps runtime secrets from GitHub
 Actions Secrets, and commits generated review artifacts:
@@ -878,7 +878,7 @@ Required or recommended GitHub Actions Secrets for channel delivery:
 - `CHANNEL_PRODUCTIVITY_TIPS_PAID_WEBHOOK`: Paid/member productivity tips group webhook.
 - `CHANNEL_ECOMMERCE_FREE_WEBHOOK`: Free/public ecommerce group webhook. The bundled ecommerce channel is inactive until enabled.
 - `CHANNEL_ECOMMERCE_PAID_WEBHOOK`: Paid/member ecommerce group webhook. The bundled ecommerce channel is inactive until enabled.
-- `HORIZON_ADMIN_WEBHOOK`: Admin-only Feishu/Lark bot URL for system alerts such as failed channel pushes, channel tests, and disable notifications.
+- `XINXIANXING_ADMIN_WEBHOOK`: Admin-only Feishu/Lark bot URL for system alerts such as failed channel pushes, channel tests, and disable notifications.
 
 Backward-compatible optional legacy delivery secrets:
 
