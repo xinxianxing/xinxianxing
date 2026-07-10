@@ -5,7 +5,9 @@ title: Configuration Guide
 
 # Configuration Guide
 
-信先行 is configured through two files: a `.env` file for API keys and a `data/config.json` file for sources, AI provider, and filtering options.
+信先行 uses `.env` or shell environment variables for secrets,
+`data/config.json` for sources, AI provider, publishing, and filtering options,
+and `config/channels/*.json` for partner or industry Feishu delivery channels.
 
 ## AI Providers
 
@@ -617,70 +619,54 @@ When `request_body` is a JSON object or array, 信先行 renders placeholders an
 
 ### Multi-Channel Feishu Delivery
 
-For partner groups or industry-specific groups, prefer the top-level `channels`
-array. Each channel has its own Feishu bot URL, content tags, optional source
-subscriptions, optional signal types, score threshold, and active switch:
+Partner and industry channels are stored outside `data/config.json`. Each
+logical channel lives in its own JSON file under `config/channels/`:
+
+```text
+config/channels/ai_tools.json
+config/channels/ai_tutorials.json
+config/channels/ai_monetization.json
+```
+
+Example channel file:
 
 ```json
 {
-  "channels": [
-    {
-      "id": "review",
-      "name": "信先行·内容审核群",
-      "webhook_url": "${CHANNEL_REVIEW_WEBHOOK}",
-      "content_tags": [],
-      "sources": [],
-      "signal_types": [],
-      "min_score": 0.0,
-      "active": true
-    },
-    {
-      "id": "ai-tools",
-      "name": "信先行·AI工具(内测)",
-      "webhook_url": "${CHANNEL_AI_TOOLS_WEBHOOK}",
-      "content_tags": ["ai", "tutorial"],
-      "sources": ["hackernews", "reddit_artificial", "twitter"],
-      "signal_types": ["TUTORIAL", "PRODUCTIVITY_TIP", "MONEY_CASE"],
-      "min_score": 6.0,
-      "active": true
-    },
-    {
-      "id": "ai-tools-partner-a",
-      "name": "信先行·AI工具(合作方A)",
-      "webhook_url": "${CHANNEL_AI_TOOLS_PARTNER_A_WEBHOOK}",
-      "content_tags": ["ai", "tutorial"],
-      "min_score": 6.0,
-      "active": true
-    },
-    {
-      "id": "ai-tools-partner-b",
-      "name": "信先行·AI工具(合作方B)",
-      "webhook_url": "${CHANNEL_AI_TOOLS_PARTNER_B_WEBHOOK}",
-      "content_tags": ["ai", "tutorial"],
-      "min_score": 6.0,
-      "active": true
-    }
-  ]
+  "channel_id": "ai_tools_partner_001",
+  "channel_name": "信先行·AI工具日报",
+  "description": "频道说明",
+  "partner_name": "合作方名称",
+  "active": false,
+  "category": "ai_tools",
+  "template_type": "action_card",
+  "free_webhook_secret_name": "CHANNEL_AI_TOOLS_PARTNER_001_FREE_WEBHOOK",
+  "paid_webhook_secret_name": "CHANNEL_AI_TOOLS_PARTNER_001_PAID_WEBHOOK",
+  "admin_webhook_secret_name": "HORIZON_ADMIN_WEBHOOK",
+  "sources": ["hackernews", "reddit_artificial", "twitter"],
+  "signal_types": ["TUTORIAL", "PRODUCTIVITY_TIP", "MONEY_CASE"],
+  "schedule": "daily_8am",
+  "max_items_per_push": 10,
+  "min_score": 7.0,
+  "dedupe_enabled": true,
+  "content_tags": ["ai", "tutorial"]
 }
 ```
 
-- `id`: Stable unique channel id. The recommended GitHub Actions Secret name is
-  `CHANNEL_[ID in uppercase with - changed to _]_WEBHOOK`.
-- `name`: Display name used in the Feishu card title.
-- `webhook_url`: Feishu/Lark bot URL, usually stored as a `${CHANNEL_...}`
-  environment placeholder.
-- `content_tags`: Reusable routing tags for content fan-out. Multiple channels
-  can share the same tags; one generated Action Card is reused and sent to every
-  active channel whose tags match. Matching uses AI tags, source metadata tags,
-  and derived tags from `signal_type` such as `tutorial`, `productivity`, and
-  `monetization`.
-- `sources`: Source ids this channel subscribes to. Source configs can define an
-  explicit `id`; otherwise scrapers derive ids such as `hackernews`,
-  `twitter`, `reddit_artificial`, or `rss_product_hunt_ai`.
-- `signal_types`: Action Card types allowed in this channel. `AI_MONETIZATION`
-  is accepted as an alias for `MONEY_CASE`.
+- `channel_id`: Stable logical channel id. File name should match it, for example `config/channels/ai_tools_partner_001.json`.
+- `channel_name`: Display name used in Feishu card titles.
+- `partner_name`: Partner/operator name for bookkeeping.
+- `active`: `false` keeps the channel saved but out of scheduled delivery; `true` joins scheduled pushes after validation.
+- `category`: Business category such as `ai_tools`, `ai_monetization`, `productivity_tips`, `ecommerce`, or `review`.
+- `template_type`: Currently `action_card`.
+- `free_webhook_secret_name` / `paid_webhook_secret_name`: Secret names only, never real webhook URLs. The naming convention is `CHANNEL_<CHANNEL_ID uppercase>_FREE_WEBHOOK` and `CHANNEL_<CHANNEL_ID uppercase>_PAID_WEBHOOK`.
+- `admin_webhook_secret_name`: Usually `HORIZON_ADMIN_WEBHOOK`.
+- `sources`: Source ids this channel subscribes to. Source configs can define an explicit `id`; otherwise scrapers derive ids such as `hackernews`, `twitter`, `reddit_artificial`, or `rss_product_hunt_ai`.
+- `signal_types`: Action Card types allowed in this channel. `AI_MONETIZATION` is accepted as an alias for `MONEY_CASE`.
+- `schedule`: Currently `daily_8am`.
+- `max_items_per_push`: Maximum cards sent to this channel per push.
 - `min_score`: Minimum score for this channel.
-- `active`: Set `false` to pause a channel without deleting its configuration.
+- `dedupe_enabled`: Reserved for channel-level dedupe controls.
+- `content_tags`: Reusable routing tags for fan-out. Multiple channels can share tags; one generated Action Card is reused and sent to every active matching channel without another AI call.
 
 The bundled `review` channel is intentionally broad: empty `content_tags`,
 `sources`, and `signal_types` mean no routing filter, and `min_score: 0.0`
@@ -688,17 +674,14 @@ means every generated Action Card is pushed to the review group. In GitHub
 Actions it is pushed right after the 06:00 draft generation/deploy stage, then
 excluded from the 08:00 formal channel push to avoid duplicate review messages.
 
-Active channels replace only their matching legacy target to avoid duplicate
-pushes during migration: `ai-tools` replaces the legacy public group,
-`ai-tools-paid` replaces the legacy paid group, and category-specific channels
-replace only the legacy category signals they cover. If a channel URL is blank
-or an unresolved `${ENV}` placeholder, 信先行 keeps using the corresponding
-legacy `webhook.url_env`, `paid_feishu_url`, or `category_feishu` target.
-
-Use the helper to add a new channel interactively:
+Use the helper commands:
 
 ```bash
-uv run horizon-channel-add
+uv run horizon-channel-add --channel-id ai_tools_partner_001 --name "信先行·AI工具日报" --partner "某某合作方" --category ai_tools --template action_card --schedule daily_8am --max-items 10 --min-score 7 --active false
+uv run horizon-channel-check --channel-id ai_tools_partner_001
+uv run horizon-channel-test --channel-id ai_tools_partner_001
+uv run horizon-channel-enable --channel-id ai_tools_partner_001
+uv run horizon-channel-disable --channel-id ai_tools_partner_001
 ```
 
 To push an already-generated draft to active channels without re-running
@@ -883,15 +866,19 @@ Required GitHub Actions Secrets for the generation stage:
 
 Required or recommended GitHub Actions Secrets for channel delivery:
 
-- `CHANNEL_REVIEW_WEBHOOK`: Feishu/Lark bot URL for the internal content review group.
-- `CHANNEL_AI_TOOLS_WEBHOOK`: Feishu/Lark bot URL for the migrated free AI tools group.
-- `CHANNEL_AI_TOOLS_PAID_WEBHOOK`: Feishu/Lark bot URL for the migrated paid AI tools group.
-- `CHANNEL_AI_TUTORIALS_WEBHOOK`: Feishu/Lark bot URL for the AI tutorial group.
-- `CHANNEL_AI_MONETIZATION_WEBHOOK`: Feishu/Lark bot URL for the AI变现 group.
-- `CHANNEL_PRODUCTIVITY_TIPS_WEBHOOK`: Feishu/Lark bot URL for the efficiency tips group.
-- `CHANNEL_ECOMMERCE_WEBHOOK`: Feishu/Lark bot URL for the ecommerce group. The bundled ecommerce channel is inactive until you enable it.
-- `HORIZON_ADMIN_WEBHOOK`: Admin-only Feishu/Lark bot URL for system alerts
-  such as failed channel pushes.
+- `CHANNEL_REVIEW_FREE_WEBHOOK`: Feishu/Lark bot URL for the internal review group.
+- `CHANNEL_REVIEW_PAID_WEBHOOK`: Optional paid/member review destination for the `review` channel.
+- `CHANNEL_AI_TOOLS_FREE_WEBHOOK`: Free/public AI tools group webhook.
+- `CHANNEL_AI_TOOLS_PAID_WEBHOOK`: Paid/member AI tools group webhook.
+- `CHANNEL_AI_TUTORIALS_FREE_WEBHOOK`: Free/public AI tutorial group webhook.
+- `CHANNEL_AI_TUTORIALS_PAID_WEBHOOK`: Paid/member AI tutorial group webhook.
+- `CHANNEL_AI_MONETIZATION_FREE_WEBHOOK`: Free/public AI monetization group webhook.
+- `CHANNEL_AI_MONETIZATION_PAID_WEBHOOK`: Paid/member AI monetization group webhook.
+- `CHANNEL_PRODUCTIVITY_TIPS_FREE_WEBHOOK`: Free/public productivity tips group webhook.
+- `CHANNEL_PRODUCTIVITY_TIPS_PAID_WEBHOOK`: Paid/member productivity tips group webhook.
+- `CHANNEL_ECOMMERCE_FREE_WEBHOOK`: Free/public ecommerce group webhook. The bundled ecommerce channel is inactive until enabled.
+- `CHANNEL_ECOMMERCE_PAID_WEBHOOK`: Paid/member ecommerce group webhook. The bundled ecommerce channel is inactive until enabled.
+- `HORIZON_ADMIN_WEBHOOK`: Admin-only Feishu/Lark bot URL for system alerts such as failed channel pushes, channel tests, and disable notifications.
 
 Backward-compatible optional legacy delivery secrets:
 

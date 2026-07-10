@@ -10,6 +10,7 @@ from typing import Any
 from pydantic import ValidationError
 
 from ..models import Config
+from ..services.channel_registry import load_runtime_channels
 
 
 # Matches ${VAR_NAME} in string config values. Names follow env-var rules
@@ -86,12 +87,18 @@ class StorageManager:
         data = _expand_env_vars(data)
 
         try:
-            return Config.model_validate(data)
+            config = Config.model_validate(data)
         except ValidationError as e:
             raise ConfigError(
                 f"Configuration validation failed for {self.config_path}\n"
                 f"Details: {e}"
             ) from e
+        channels_dir = self.data_dir.parent / "config" / "channels"
+        config.channels = load_runtime_channels(
+            channels_dir=channels_dir,
+            fallback_channels=config.channels,
+        )
+        return config
 
     def save_config(self, config: Config, backup: bool = True) -> Path:
         """Save configuration to config.json, optionally backing up the existing file.

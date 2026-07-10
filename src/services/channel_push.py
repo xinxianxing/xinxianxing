@@ -150,10 +150,17 @@ async def push_draft_channels(
         if channel_id.strip()
     }
     if include or exclude:
+        def _channel_keys(channel) -> set[str]:
+            keys = {channel.id}
+            if channel.logical_channel_id:
+                keys.add(channel.logical_channel_id)
+            return keys
+
         config.channels = [
             channel
             for channel in config.channels
-            if (not include or channel.id in include) and channel.id not in exclude
+            if (not include or not _channel_keys(channel).isdisjoint(include))
+            and _channel_keys(channel).isdisjoint(exclude)
         ]
     draft_path = storage.drafts_dir / f"xinxianxing-{date}-{language}.md"
     if not draft_path.exists():

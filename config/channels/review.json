@@ -1,0 +1,19 @@
+{
+  "channel_id": "review",
+  "channel_name": "信先行·内容审核群",
+  "description": "内部审核群，接收当天生成的全部 Action Card，便于提前筛选内容。",
+  "partner_name": "信先行内部",
+  "active": true,
+  "category": "review",
+  "template_type": "action_card",
+  "free_webhook_secret_name": "CHANNEL_REVIEW_FREE_WEBHOOK",
+  "paid_webhook_secret_name": "CHANNEL_REVIEW_PAID_WEBHOOK",
+  "admin_webhook_secret_name": "HORIZON_ADMIN_WEBHOOK",
+  "sources": [],
+  "signal_types": [],
+  "schedule": "daily_8am",
+  "max_items_per_push": 20,
+  "min_score": 0.0,
+  "dedupe_enabled": true,
+  "content_tags": []
+}

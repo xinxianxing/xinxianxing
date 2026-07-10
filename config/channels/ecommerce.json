@@ -1,0 +1,31 @@
+{
+  "channel_id": "ecommerce",
+  "channel_name": "信先行·电商运营(内测)",
+  "description": "电商运营、独立站和海外获客方向的预留频道。",
+  "partner_name": "待定",
+  "active": false,
+  "category": "ecommerce",
+  "template_type": "action_card",
+  "free_webhook_secret_name": "CHANNEL_ECOMMERCE_FREE_WEBHOOK",
+  "paid_webhook_secret_name": "CHANNEL_ECOMMERCE_PAID_WEBHOOK",
+  "admin_webhook_secret_name": "HORIZON_ADMIN_WEBHOOK",
+  "sources": [
+    "reddit_ecommerce",
+    "twitter"
+  ],
+  "signal_types": [
+    "TUTORIAL",
+    "MONEY_CASE",
+    "TREND"
+  ],
+  "schedule": "daily_8am",
+  "max_items_per_push": 10,
+  "min_score": 6.0,
+  "dedupe_enabled": true,
+  "content_tags": [
+    "ecommerce",
+    "tutorial",
+    "money_case",
+    "trend"
+  ]
+}

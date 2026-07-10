@@ -477,22 +477,13 @@ def redact_headers(headers: dict[str, str]) -> dict[str, str]:
     }
 
 
-def build_admin_alert_card(
+def build_admin_notice_card(
     *,
-    channel_id: str,
-    channel_name: str,
-    reason: str,
-    failed_at: datetime | None = None,
+    title: str,
+    lines: list[str],
+    template: str = "blue",
 ) -> dict[str, Any]:
-    """Build a compact Feishu card for system failure alerts."""
-    failed_at = failed_at or datetime.now(timezone.utc)
-    content = "\n".join(
-        [
-            f"**频道**: {channel_name} (`{channel_id}`)",
-            f"**失败原因**: {reason}",
-            f"**失败时间**: {failed_at.isoformat()}",
-        ]
-    )
+    """Build a compact Feishu card for system/admin notices."""
     return {
         "msg_type": "interactive",
         "card": {
@@ -504,15 +495,74 @@ def build_admin_alert_card(
             "header": {
                 "title": {
                     "tag": "plain_text",
-                    "content": "信先行频道推送失败",
+                    "content": title,
                 },
-                "template": "red",
+                "template": template,
             },
             "body": {
-                "elements": [_markdown(content)],
+                "elements": [_markdown("\n".join(lines))],
             },
         },
     }
+
+
+def build_admin_alert_card(
+    *,
+    channel_id: str,
+    channel_name: str,
+    reason: str,
+    failed_at: datetime | None = None,
+) -> dict[str, Any]:
+    """Build a compact Feishu card for system failure alerts."""
+    failed_at = failed_at or datetime.now(timezone.utc)
+    return build_admin_notice_card(
+        title="信先行频道推送失败",
+        template="red",
+        lines=[
+            f"**频道**: {channel_name} (`{channel_id}`)",
+            f"**失败原因**: {reason}",
+            f"**失败时间**: {failed_at.isoformat()}",
+        ],
+    )
+
+
+async def send_admin_notice(
+    admin_webhook_url: str | None,
+    *,
+    title: str,
+    lines: list[str],
+    template: str = "blue",
+) -> bool:
+    """Send one system/admin notice to the admin webhook."""
+    if _is_blank_or_unresolved_env_ref(admin_webhook_url):
+        logger.warning("HORIZON_ADMIN_WEBHOOK is not configured; cannot send admin notice.")
+        return False
+
+    url = str(admin_webhook_url).strip()
+    safe_url = redact_url(url)
+    body = json.dumps(
+        build_admin_notice_card(title=title, lines=lines, template=template),
+        ensure_ascii=False,
+    )
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                url,
+                content=body.encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+            )
+        if 200 <= response.status_code < 300:
+            logger.info("Admin notice sent OK. URL: %s, body: %s", safe_url, response.text[:500])
+            return True
+        logger.error(
+            "Admin notice failed: URL=%s, status=%d, body=%s",
+            safe_url,
+            response.status_code,
+            response.text[:500],
+        )
+    except Exception as exc:
+        logger.error("Admin notice failed: URL=%s, error=%s", safe_url, exc)
+    return False
 
 
 async def send_admin_alert(
@@ -531,36 +581,17 @@ async def send_admin_alert(
         )
         return False
 
-    url = str(admin_webhook_url).strip()
-    safe_url = redact_url(url)
-    body = json.dumps(
-        build_admin_alert_card(
-            channel_id=channel_id,
-            channel_name=channel_name,
-            reason=reason,
-            failed_at=failed_at,
-        ),
-        ensure_ascii=False,
+    failed_at = failed_at or datetime.now(timezone.utc)
+    return await send_admin_notice(
+        admin_webhook_url,
+        title="信先行频道推送失败",
+        template="red",
+        lines=[
+            f"**频道**: {channel_name} (`{channel_id}`)",
+            f"**失败原因**: {reason}",
+            f"**失败时间**: {failed_at.isoformat()}",
+        ],
     )
-    try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.post(
-                url,
-                content=body.encode("utf-8"),
-                headers={"Content-Type": "application/json"},
-            )
-        if 200 <= response.status_code < 300:
-            logger.info("Admin alert sent OK. URL: %s, body: %s", safe_url, response.text[:500])
-            return True
-        logger.error(
-            "Admin alert failed: URL=%s, status=%d, body=%s",
-            safe_url,
-            response.status_code,
-            response.text[:500],
-        )
-    except Exception as exc:
-        logger.error("Admin alert failed: URL=%s, error=%s", safe_url, exc)
-    return False
 
 
 class WebhookNotifier:
@@ -1250,7 +1281,11 @@ class WebhookNotifier:
         }
         candidate_items = (
             paid_items
-            if channel.id in {"paid", "ai-tools-paid"} and paid_items is not None
+            if (
+                channel.id in {"paid", "ai-tools-paid", "ai_tools_paid"}
+                or channel.destination_type == "paid"
+            )
+            and paid_items is not None
             else important_items
         )
 
@@ -1264,6 +1299,8 @@ class WebhookNotifier:
             key=lambda pair: self._item_score_value(pair[1]) or 0,
             reverse=True,
         )
+        if channel.max_items_per_push and channel.max_items_per_push > 0:
+            indexed_items = indexed_items[: channel.max_items_per_push]
         return indexed_items
 
     def build_channel_feishu_messages(
@@ -1323,7 +1360,15 @@ class WebhookNotifier:
         for channel in self.channels:
             if not channel.active or channel.id not in self.channel_webhook_urls:
                 continue
-            if channel.id in {"public", "ai-tools", "paid", "ai-tools-paid"}:
+            legacy_replaced_ids = {
+                "public",
+                "ai-tools",
+                "ai_tools",
+                "paid",
+                "ai-tools-paid",
+                "ai_tools_paid",
+            }
+            if channel.id in legacy_replaced_ids:
                 continue
             signals.update(self._channel_signal_types(channel))
         return signals
@@ -1755,7 +1800,7 @@ class WebhookNotifier:
             for channel, message in channel_messages:
                 await self.notify_channel_feishu(channel, message)
 
-        public_replaced = bool(configured_channel_ids & {"public", "ai-tools"})
+        public_replaced = bool(configured_channel_ids & {"public", "ai-tools", "ai_tools"})
         if not public_replaced:
             messages = self.build_daily_summary_messages(
                 summary=summary,
@@ -1776,7 +1821,7 @@ class WebhookNotifier:
             for message in messages:
                 await self.notify(message)
 
-        paid_replaced = bool(configured_channel_ids & {"paid", "ai-tools-paid"})
+        paid_replaced = bool(configured_channel_ids & {"paid", "ai-tools-paid", "ai_tools_paid"})
         if not paid_replaced:
             paid_messages = self.build_paid_feishu_messages(
                 paid_items=paid_items if paid_items is not None else important_items,

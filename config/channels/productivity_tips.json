@@ -1,0 +1,29 @@
+{
+  "channel_id": "productivity_tips",
+  "channel_name": "信先行·效率技巧",
+  "description": "AI效率技巧、工作流优化和实操技巧频道。",
+  "partner_name": "信先行自营",
+  "active": true,
+  "category": "productivity_tips",
+  "template_type": "action_card",
+  "free_webhook_secret_name": "CHANNEL_PRODUCTIVITY_TIPS_FREE_WEBHOOK",
+  "paid_webhook_secret_name": "CHANNEL_PRODUCTIVITY_TIPS_PAID_WEBHOOK",
+  "admin_webhook_secret_name": "HORIZON_ADMIN_WEBHOOK",
+  "sources": [
+    "reddit_promptengineering",
+    "reddit_chatgptpromptgenius",
+    "twitter"
+  ],
+  "signal_types": [
+    "PRODUCTIVITY_TIP"
+  ],
+  "schedule": "daily_8am",
+  "max_items_per_push": 10,
+  "min_score": 6.0,
+  "dedupe_enabled": true,
+  "content_tags": [
+    "ai",
+    "productivity",
+    "productivity_tip"
+  ]
+}

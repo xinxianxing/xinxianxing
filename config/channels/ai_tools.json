@@ -1,0 +1,38 @@
+{
+  "channel_id": "ai_tools",
+  "channel_name": "信先行·AI工具日报",
+  "description": "AI工具、教程技巧、效率和变现方向的综合频道。",
+  "partner_name": "信先行自营",
+  "active": true,
+  "category": "ai_tools",
+  "template_type": "action_card",
+  "free_webhook_secret_name": "CHANNEL_AI_TOOLS_FREE_WEBHOOK",
+  "paid_webhook_secret_name": "CHANNEL_AI_TOOLS_PAID_WEBHOOK",
+  "admin_webhook_secret_name": "HORIZON_ADMIN_WEBHOOK",
+  "sources": [
+    "hackernews",
+    "product_hunt_ai",
+    "latent_space",
+    "indie_hackers",
+    "reddit_promptengineering",
+    "reddit_chatgptpromptgenius",
+    "reddit_artificial",
+    "twitter"
+  ],
+  "signal_types": [
+    "TUTORIAL",
+    "PRODUCTIVITY_TIP",
+    "MONEY_CASE"
+  ],
+  "schedule": "daily_8am",
+  "max_items_per_push": 10,
+  "min_score": 6.0,
+  "dedupe_enabled": true,
+  "content_tags": [
+    "ai",
+    "tutorial",
+    "productivity",
+    "monetization",
+    "money_case"
+  ]
+}

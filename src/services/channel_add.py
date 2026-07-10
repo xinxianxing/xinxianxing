@@ -1,177 +1,94 @@
-"""Interactive CLI for adding a channel configuration."""
+"""CLI for creating file-backed channel configuration."""
 
 from __future__ import annotations
 
-import json
-import re
-from pathlib import Path
+import argparse
 
 from dotenv import load_dotenv
 from rich.console import Console
-from rich.prompt import Confirm, FloatPrompt, Prompt
 
-from ..models import SignalType
+from ..models import ChannelFileConfig
+from .channel_registry import (
+    default_free_secret_name,
+    default_paid_secret_name,
+    normalize_channel_id,
+    write_channel_file,
+)
+
 
 console = Console()
 
-CONTENT_TAG_OPTIONS = [
-    "ai",
-    "tutorial",
-    "monetization",
-    "money_case",
-    "productivity",
-    "productivity_tip",
-    "ecommerce",
-    "trend",
-    "tool",
-    "news",
-]
+
+def _csv_values(value: str | None) -> list[str]:
+    if not value:
+        return []
+    return [item.strip() for item in value.split(",") if item.strip()]
 
 
-def _slug_source_id(prefix: str, value: str) -> str:
-    slug = re.sub(r"[^a-z0-9]+", "_", value.lower()).strip("_")
-    return f"{prefix}_{slug}" if slug else prefix
+def _bool_arg(value: str | bool) -> bool:
+    if isinstance(value, bool):
+        return value
+    normalized = value.strip().lower()
+    if normalized in {"true", "1", "yes", "y", "on"}:
+        return True
+    if normalized in {"false", "0", "no", "n", "off"}:
+        return False
+    raise argparse.ArgumentTypeError("active must be true or false")
 
 
-def _secret_name_for_channel(channel_id: str) -> str:
-    suffix = re.sub(r"[^A-Za-z0-9]+", "_", channel_id.upper()).strip("_")
-    return f"CHANNEL_{suffix}_WEBHOOK"
-
-
-def _collect_source_ids(config: dict) -> list[str]:
-    sources = config.get("sources", {})
-    ids: list[str] = []
-
-    hackernews = sources.get("hackernews") or {}
-    if hackernews.get("enabled", True):
-        ids.append(str(hackernews.get("id") or "hackernews"))
-
-    for feed in sources.get("rss") or []:
-        if not feed.get("enabled", True):
-            continue
-        ids.append(str(feed.get("id") or _slug_source_id("rss", feed.get("name", ""))))
-
-    reddit = sources.get("reddit") or {}
-    if reddit.get("enabled", True):
-        for sub in reddit.get("subreddits") or []:
-            if sub.get("enabled", True):
-                ids.append(
-                    str(sub.get("id") or _slug_source_id("reddit", sub.get("subreddit", "")))
-                )
-        for user in reddit.get("users") or []:
-            if user.get("enabled", True):
-                ids.append(
-                    str(user.get("id") or _slug_source_id("reddit_user", user.get("username", "")))
-                )
-
-    telegram = sources.get("telegram") or {}
-    if telegram.get("enabled", True):
-        for channel in telegram.get("channels") or []:
-            if channel.get("enabled", True):
-                ids.append(
-                    str(channel.get("id") or _slug_source_id("telegram", channel.get("channel", "")))
-                )
-
-    twitter = sources.get("twitter") or {}
-    if twitter.get("enabled", False):
-        ids.append(str(twitter.get("id") or "twitter"))
-
-    openbb = sources.get("openbb") or {}
-    if openbb.get("enabled", False):
-        for watchlist in openbb.get("watchlists") or []:
-            if watchlist.get("enabled", True):
-                ids.append(
-                    str(watchlist.get("id") or _slug_source_id("openbb", watchlist.get("name", "")))
-                )
-
-    ossinsight = sources.get("ossinsight") or {}
-    if ossinsight.get("enabled", False):
-        ids.append(str(ossinsight.get("id") or "ossinsight"))
-
-    seen: set[str] = set()
-    unique_ids = []
-    for source_id in ids:
-        if source_id and source_id not in seen:
-            seen.add(source_id)
-            unique_ids.append(source_id)
-    return unique_ids
-
-
-def _parse_choices(raw: str, options: list[str]) -> list[str]:
-    selected: list[str] = []
-    for part in raw.split(","):
-        token = part.strip()
-        if not token:
-            continue
-        if token.isdigit():
-            index = int(token) - 1
-            if 0 <= index < len(options):
-                selected.append(options[index])
-                continue
-        selected.append(token)
-
-    seen: set[str] = set()
-    return [value for value in selected if not (value in seen or seen.add(value))]
-
-
-def _prompt_multi_select(title: str, options: list[str]) -> list[str]:
-    console.print(f"\n[bold]{title}[/bold]")
-    for index, option in enumerate(options, start=1):
-        console.print(f"  {index}. {option}")
-    raw = Prompt.ask("输入编号或名称，多个用英文逗号分隔")
-    return _parse_choices(raw, options)
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description="Create a 信先行 channel config")
+    parser.add_argument("--channel-id", required=True, help="Channel id, e.g. ai_tools_partner_001")
+    parser.add_argument("--name", required=True, help="Channel display name")
+    parser.add_argument("--partner", default="", help="Partner name")
+    parser.add_argument("--description", default="", help="Channel description")
+    parser.add_argument("--category", required=True, help="Channel category, e.g. ai_tools")
+    parser.add_argument("--template", default="action_card", help="Template type")
+    parser.add_argument("--schedule", default="daily_8am", help="Push schedule")
+    parser.add_argument("--max-items", type=int, default=10, help="Max cards per push")
+    parser.add_argument("--min-score", type=float, default=7.0, help="Minimum score")
+    parser.add_argument("--active", type=_bool_arg, default=False, help="true or false; default false")
+    parser.add_argument("--sources", default="", help="Comma-separated source ids")
+    parser.add_argument("--signal-types", default="", help="Comma-separated signal types")
+    parser.add_argument("--content-tags", default="", help="Comma-separated content tags")
+    parser.add_argument("--dedupe-enabled", type=_bool_arg, default=True, help="true or false; default true")
+    parser.add_argument("--admin-secret", default="HORIZON_ADMIN_WEBHOOK", help="Admin alert secret name")
+    parser.add_argument("--free-secret", default="", help="Override free webhook secret name")
+    parser.add_argument("--paid-secret", default="", help="Override paid webhook secret name")
+    return parser
 
 
 def main() -> None:
     """CLI entry point for horizon-channel-add."""
     load_dotenv()
-    config_path = Path("data/config.json")
-    if not config_path.exists():
-        raise SystemExit("data/config.json 不存在，请先在项目根目录运行。")
-
-    config = json.loads(config_path.read_text(encoding="utf-8"))
-    channels = config.setdefault("channels", [])
-    existing_ids = {channel.get("id") for channel in channels}
-
-    console.print("[bold cyan]新增信先行 Channel[/bold cyan]")
-    channel_id = Prompt.ask("channel id，例如 ai-tools 或 ecommerce").strip()
-    if not channel_id:
-        raise SystemExit("channel id 不能为空。")
-    if channel_id in existing_ids:
-        raise SystemExit(f"channel id 已存在：{channel_id}")
-
-    name = Prompt.ask("群名称，用于推送标题").strip()
-    if not name:
-        raise SystemExit("群名称不能为空。")
-
-    source_ids = _collect_source_ids(config)
-    selected_sources = _prompt_multi_select("选择信源 source id", source_ids)
-    content_tags = _prompt_multi_select("选择内容标签 content_tags", CONTENT_TAG_OPTIONS)
-    signal_options = [signal.value for signal in SignalType]
-    selected_signals = _prompt_multi_select("选择 signal_types", signal_options)
-    min_score = FloatPrompt.ask("最低评分 min_score", default=6.0)
-    active = Confirm.ask("是否立即启用 active", default=True)
-
-    secret_name = _secret_name_for_channel(channel_id)
-    channels.append(
-        {
-            "id": channel_id,
-            "name": name,
-            "webhook_url": f"${{{secret_name}}}",
-            "content_tags": content_tags,
-            "sources": selected_sources,
-            "signal_types": selected_signals,
-            "min_score": min_score,
-            "active": active,
-        }
+    args = build_parser().parse_args()
+    channel_id = normalize_channel_id(args.channel_id)
+    channel = ChannelFileConfig(
+        channel_id=channel_id,
+        channel_name=args.name,
+        description=args.description,
+        partner_name=args.partner,
+        active=args.active,
+        category=args.category,
+        template_type=args.template,
+        free_webhook_secret_name=args.free_secret or default_free_secret_name(channel_id),
+        paid_webhook_secret_name=args.paid_secret or default_paid_secret_name(channel_id),
+        admin_webhook_secret_name=args.admin_secret,
+        sources=_csv_values(args.sources),
+        signal_types=_csv_values(args.signal_types),
+        schedule=args.schedule,
+        max_items_per_push=args.max_items,
+        min_score=args.min_score,
+        dedupe_enabled=args.dedupe_enabled,
+        content_tags=_csv_values(args.content_tags),
     )
-
-    config_path.write_text(
-        json.dumps(config, ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
-    )
-    console.print(f"\n[green]已写入：{config_path}[/green]")
-    console.print(f"[yellow]请在 GitHub Actions Secrets 新增：{secret_name}[/yellow]")
+    path = write_channel_file(channel)
+    console.print(f"[green]已创建频道配置：{path}[/green]")
+    console.print("[yellow]默认不会自动启用；启用前请配置 GitHub Secrets 并运行 check。[/yellow]")
+    console.print("需要新增 GitHub Secrets：")
+    console.print(f"- {channel.free_webhook_secret_name}")
+    console.print(f"- {channel.paid_webhook_secret_name}")
+    console.print(f"- {channel.admin_webhook_secret_name}")
 
 
 if __name__ == "__main__":

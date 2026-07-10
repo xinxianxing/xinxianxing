@@ -1,0 +1,29 @@
+{
+  "channel_id": "ai_monetization",
+  "channel_name": "信先行·AI变现",
+  "description": "AI副业、变现案例、赚钱案例方向的频道。",
+  "partner_name": "信先行自营",
+  "active": true,
+  "category": "ai_monetization",
+  "template_type": "action_card",
+  "free_webhook_secret_name": "CHANNEL_AI_MONETIZATION_FREE_WEBHOOK",
+  "paid_webhook_secret_name": "CHANNEL_AI_MONETIZATION_PAID_WEBHOOK",
+  "admin_webhook_secret_name": "HORIZON_ADMIN_WEBHOOK",
+  "sources": [
+    "indie_hackers",
+    "reddit_artificial",
+    "twitter"
+  ],
+  "signal_types": [
+    "MONEY_CASE"
+  ],
+  "schedule": "daily_8am",
+  "max_items_per_push": 10,
+  "min_score": 6.0,
+  "dedupe_enabled": true,
+  "content_tags": [
+    "ai",
+    "monetization",
+    "money_case"
+  ]
+}

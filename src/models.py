@@ -400,11 +400,43 @@ class ChannelConfig(BaseModel):
     id: str
     name: str
     webhook_url: Optional[str] = None
+    logical_channel_id: Optional[str] = None
+    destination_type: Optional[str] = None
+    description: Optional[str] = None
+    partner_name: Optional[str] = None
+    category: Optional[str] = None
+    template_type: str = "action_card"
+    schedule: str = "daily_8am"
+    max_items_per_push: Optional[int] = None
+    dedupe_enabled: bool = True
+    admin_webhook_secret_name: str = "HORIZON_ADMIN_WEBHOOK"
     content_tags: List[str] = Field(default_factory=list)
     sources: List[str] = Field(default_factory=list)
     signal_types: List[str] = Field(default_factory=list)
     min_score: float = 6.0
     active: bool = True
+
+
+class ChannelFileConfig(BaseModel):
+    """File-backed partner/channel configuration."""
+
+    channel_id: str
+    channel_name: str
+    description: str = ""
+    partner_name: str = ""
+    active: bool = False
+    category: str = ""
+    template_type: str = "action_card"
+    free_webhook_secret_name: str = ""
+    paid_webhook_secret_name: str = ""
+    admin_webhook_secret_name: str = "HORIZON_ADMIN_WEBHOOK"
+    sources: List[str] = Field(default_factory=list)
+    signal_types: List[str] = Field(default_factory=list)
+    schedule: str = "daily_8am"
+    max_items_per_push: int = 10
+    min_score: float = 7.0
+    dedupe_enabled: bool = True
+    content_tags: List[str] = Field(default_factory=list)
 
 
 class SiteConfig(BaseModel):
