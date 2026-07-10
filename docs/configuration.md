@@ -882,13 +882,13 @@ Required or recommended GitHub Actions Secrets for channel delivery:
 
 Backward-compatible optional legacy delivery secrets:
 
-- `XINXIANXING_WEBHOOK_URL`: Public Feishu/Lark bot webhook URL.
-- `XINXIANXING_PAID_FEISHU_URL`: Paid-channel Feishu/Lark bot webhook URL. If it is
-  unset, the paid push is skipped and the public push still runs.
-- `XINXIANXING_TUTORIAL_FEISHU_URL`: Category Feishu/Lark bot webhook URL for `TUTORIAL` cards.
-- `XINXIANXING_AI_MONETIZATION_FEISHU_URL`: Category Feishu/Lark bot webhook URL for the AI变现 group. This maps to `MONEY_CASE` cards internally.
-- `XINXIANXING_MONEY_CASE_FEISHU_URL`: Backward-compatible category Feishu/Lark bot webhook URL for `MONEY_CASE` cards. Prefer `XINXIANXING_AI_MONETIZATION_FEISHU_URL` for new setups.
-- `XINXIANXING_PRODUCTIVITY_TIP_FEISHU_URL`: Category Feishu/Lark bot webhook URL for `PRODUCTIVITY_TIP` cards.
+- `XINXIANXING_WEBHOOK_URL`: Reused as `CHANNEL_AI_TOOLS_FREE_WEBHOOK` when the new secret is not set.
+- `XINXIANXING_PAID_FEISHU_URL`: Reused as `CHANNEL_AI_TOOLS_PAID_WEBHOOK` when the new secret is not set.
+- `XINXIANXING_TUTORIAL_FEISHU_URL`: Reused as `CHANNEL_AI_TUTORIALS_FREE_WEBHOOK` when the new secret is not set.
+- `XINXIANXING_AI_MONETIZATION_FEISHU_URL`: Reused as `CHANNEL_AI_MONETIZATION_FREE_WEBHOOK` when the new secret is not set.
+- `XINXIANXING_MONEY_CASE_FEISHU_URL`: Secondary fallback for `CHANNEL_AI_MONETIZATION_FREE_WEBHOOK`.
+- `XINXIANXING_PRODUCTIVITY_TIP_FEISHU_URL`: Reused as `CHANNEL_PRODUCTIVITY_TIPS_FREE_WEBHOOK` when the new secret is not set.
+- `CHANNEL_REVIEW_WEBHOOK`: Reused as `CHANNEL_REVIEW_FREE_WEBHOOK` when the new secret is not set.
 - `CLOUDFLARE_ACCOUNT_ID`: Cloudflare account ID for the `xinxianxing` Pages project.
 - `CLOUDFLARE_API_TOKEN`: Cloudflare API token with Account > Cloudflare Pages > Edit permission.
 

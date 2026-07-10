@@ -102,6 +102,35 @@ def test_check_channel_lists_missing_secrets(tmp_path: Path) -> None:
     ]
 
 
+def test_runtime_channels_accept_legacy_self_operated_secret_aliases(tmp_path: Path) -> None:
+    channels_dir = tmp_path / "config" / "channels"
+    write_channel_file(
+        ChannelFileConfig(
+            channel_id="ai_tools",
+            channel_name="信先行·AI工具日报",
+            active=True,
+            category="ai_tools",
+            template_type="action_card",
+            free_webhook_secret_name="CHANNEL_AI_TOOLS_FREE_WEBHOOK",
+            paid_webhook_secret_name="CHANNEL_AI_TOOLS_PAID_WEBHOOK",
+            sources=["hackernews"],
+            signal_types=["TUTORIAL"],
+        ),
+        channels_dir=channels_dir,
+    )
+
+    runtime = load_runtime_channels(
+        channels_dir=channels_dir,
+        env={
+            "XINXIANXING_WEBHOOK_URL": "https://example.com/legacy-free",
+            "XINXIANXING_PAID_FEISHU_URL": "https://example.com/legacy-paid",
+        },
+    )
+
+    assert runtime[0].webhook_url == "https://example.com/legacy-free"
+    assert runtime[1].webhook_url == "https://example.com/legacy-paid"
+
+
 def test_review_channel_can_use_open_routing_when_enabled(tmp_path: Path) -> None:
     channels_dir = tmp_path / "config" / "channels"
     channel_data = {

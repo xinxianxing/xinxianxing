@@ -17,6 +17,19 @@ from ..models import ChannelConfig, ChannelFileConfig
 CHANNELS_DIR = Path("config/channels")
 SUPPORTED_TEMPLATE_TYPES = {"action_card"}
 SUPPORTED_SCHEDULES = {"daily_8am"}
+LEGACY_SECRET_ALIASES: dict[str, tuple[str, ...]] = {
+    "CHANNEL_REVIEW_FREE_WEBHOOK": ("CHANNEL_REVIEW_WEBHOOK",),
+    "CHANNEL_AI_TOOLS_FREE_WEBHOOK": ("XINXIANXING_WEBHOOK_URL",),
+    "CHANNEL_AI_TOOLS_PAID_WEBHOOK": ("XINXIANXING_PAID_FEISHU_URL",),
+    "CHANNEL_AI_TUTORIALS_FREE_WEBHOOK": ("XINXIANXING_TUTORIAL_FEISHU_URL",),
+    "CHANNEL_AI_MONETIZATION_FREE_WEBHOOK": (
+        "XINXIANXING_AI_MONETIZATION_FEISHU_URL",
+        "XINXIANXING_MONEY_CASE_FEISHU_URL",
+    ),
+    "CHANNEL_PRODUCTIVITY_TIPS_FREE_WEBHOOK": (
+        "XINXIANXING_PRODUCTIVITY_TIP_FEISHU_URL",
+    ),
+}
 
 
 @dataclass(frozen=True)
@@ -112,6 +125,15 @@ def write_channel_file(
     return path
 
 
+def resolve_secret_value(secret_name: str, env: Mapping[str, str]) -> str | None:
+    """Return a secret value, accepting legacy self-operated secret aliases."""
+    for candidate in (secret_name, *LEGACY_SECRET_ALIASES.get(secret_name, ())):
+        value = env.get(candidate)
+        if value:
+            return value
+    return None
+
+
 def channel_destinations(
     channel: ChannelFileConfig,
     env: Mapping[str, str] | None = None,
@@ -130,7 +152,7 @@ def channel_destinations(
             ChannelDestination(
                 destination_type=destination_type,
                 secret_name=secret,
-                webhook_url=env.get(secret) or f"${{{secret}}}",
+                webhook_url=resolve_secret_value(secret, env) or f"${{{secret}}}",
             )
         )
     return destinations
@@ -279,7 +301,7 @@ def check_channel(
         secret = secret_name.strip()
         if not secret:
             result.missing_secrets.append("<empty webhook secret name>")
-        elif not env.get(secret):
+        elif not resolve_secret_value(secret, env):
             result.missing_secrets.append(secret)
 
     require_active_ready = channel.active or for_enable
