@@ -409,7 +409,7 @@ class ChannelConfig(BaseModel):
     schedule: str = "daily_8am"
     max_items_per_push: Optional[int] = None
     dedupe_enabled: bool = True
-    admin_webhook_secret_name: str = "HORIZON_ADMIN_WEBHOOK"
+    admin_webhook_secret_name: str = "XINXIANXING_ADMIN_WEBHOOK"
     content_tags: List[str] = Field(default_factory=list)
     sources: List[str] = Field(default_factory=list)
     signal_types: List[str] = Field(default_factory=list)
@@ -429,7 +429,7 @@ class ChannelFileConfig(BaseModel):
     template_type: str = "action_card"
     free_webhook_secret_name: str = ""
     paid_webhook_secret_name: str = ""
-    admin_webhook_secret_name: str = "HORIZON_ADMIN_WEBHOOK"
+    admin_webhook_secret_name: str = "XINXIANXING_ADMIN_WEBHOOK"
     sources: List[str] = Field(default_factory=list)
     signal_types: List[str] = Field(default_factory=list)
     schedule: str = "daily_8am"

@@ -67,7 +67,7 @@ jobs:
           APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
           CHANNEL_REVIEW_FREE_WEBHOOK: ${{ secrets.CHANNEL_REVIEW_FREE_WEBHOOK }}
           CHANNEL_REVIEW_PAID_WEBHOOK: ${{ secrets.CHANNEL_REVIEW_PAID_WEBHOOK }}
-          HORIZON_ADMIN_WEBHOOK: ${{ secrets.HORIZON_ADMIN_WEBHOOK }}
+          XINXIANXING_ADMIN_WEBHOOK: ${{ secrets.XINXIANXING_ADMIN_WEBHOOK }}
         run: |
           missing=0
           for name in DEEPSEEK_API_KEY APIFY_TOKEN; do
@@ -79,8 +79,8 @@ jobs:
           if [ -z "$CHANNEL_REVIEW_FREE_WEBHOOK" ]; then
             echo "::notice::CHANNEL_REVIEW_FREE_WEBHOOK is not set; the 06:00 review-group push will be skipped."
           fi
-          if [ -z "$HORIZON_ADMIN_WEBHOOK" ]; then
-            echo "::warning::HORIZON_ADMIN_WEBHOOK is not set; failed review pushes cannot send admin alerts."
+          if [ -z "$XINXIANXING_ADMIN_WEBHOOK" ]; then
+            echo "::warning::XINXIANXING_ADMIN_WEBHOOK is not set; failed review pushes cannot send admin alerts."
           fi
           exit "$missing"
 
@@ -108,7 +108,7 @@ jobs:
         env:
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
           APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
-        run: uv run horizon --hours 24 --date "$RUN_DATE" --skip-webhook
+        run: uv run xinxianxing --hours 24 --date "$RUN_DATE" --skip-webhook
 
       - name: Ensure published posts were not changed
         run: |
@@ -164,8 +164,8 @@ jobs:
         env:
           CHANNEL_REVIEW_FREE_WEBHOOK: ${{ secrets.CHANNEL_REVIEW_FREE_WEBHOOK }}
           CHANNEL_REVIEW_PAID_WEBHOOK: ${{ secrets.CHANNEL_REVIEW_PAID_WEBHOOK }}
-          HORIZON_ADMIN_WEBHOOK: ${{ secrets.HORIZON_ADMIN_WEBHOOK }}
-        run: uv run horizon-channel-push --date "$RUN_DATE" --language zh --channel-id review
+          XINXIANXING_ADMIN_WEBHOOK: ${{ secrets.XINXIANXING_ADMIN_WEBHOOK }}
+        run: uv run xinxianxing-channel-push --date "$RUN_DATE" --language zh --channel-id review
 
   push-channels:
     needs: generate-draft
@@ -231,15 +231,15 @@ jobs:
           CHANNEL_REVIEW_PAID_WEBHOOK: ${{ secrets.CHANNEL_REVIEW_PAID_WEBHOOK }}
           CHANNEL_ECOMMERCE_FREE_WEBHOOK: ${{ secrets.CHANNEL_ECOMMERCE_FREE_WEBHOOK }}
           CHANNEL_ECOMMERCE_PAID_WEBHOOK: ${{ secrets.CHANNEL_ECOMMERCE_PAID_WEBHOOK }}
-          HORIZON_ADMIN_WEBHOOK: ${{ secrets.HORIZON_ADMIN_WEBHOOK }}
+          XINXIANXING_ADMIN_WEBHOOK: ${{ secrets.XINXIANXING_ADMIN_WEBHOOK }}
         run: |
           for name in CHANNEL_AI_TOOLS_FREE_WEBHOOK CHANNEL_AI_TOOLS_PAID_WEBHOOK CHANNEL_AI_TUTORIALS_FREE_WEBHOOK CHANNEL_AI_TUTORIALS_PAID_WEBHOOK CHANNEL_AI_MONETIZATION_FREE_WEBHOOK CHANNEL_AI_MONETIZATION_PAID_WEBHOOK CHANNEL_PRODUCTIVITY_TIPS_FREE_WEBHOOK CHANNEL_PRODUCTIVITY_TIPS_PAID_WEBHOOK CHANNEL_REVIEW_FREE_WEBHOOK CHANNEL_REVIEW_PAID_WEBHOOK CHANNEL_ECOMMERCE_FREE_WEBHOOK CHANNEL_ECOMMERCE_PAID_WEBHOOK; do
             if [ -z "${!name}" ]; then
               echo "::notice::${name} is not set; that channel will be skipped if active."
             fi
           done
-          if [ -z "$HORIZON_ADMIN_WEBHOOK" ]; then
-            echo "::warning::HORIZON_ADMIN_WEBHOOK is not set; failed channel pushes cannot send admin alerts."
+          if [ -z "$XINXIANXING_ADMIN_WEBHOOK" ]; then
+            echo "::warning::XINXIANXING_ADMIN_WEBHOOK is not set; failed channel pushes cannot send admin alerts."
           fi
 
       - name: Push draft to active channels
@@ -262,5 +262,5 @@ jobs:
           CHANNEL_REVIEW_PAID_WEBHOOK: ${{ secrets.CHANNEL_REVIEW_PAID_WEBHOOK }}
           CHANNEL_ECOMMERCE_FREE_WEBHOOK: ${{ secrets.CHANNEL_ECOMMERCE_FREE_WEBHOOK }}
           CHANNEL_ECOMMERCE_PAID_WEBHOOK: ${{ secrets.CHANNEL_ECOMMERCE_PAID_WEBHOOK }}
-          HORIZON_ADMIN_WEBHOOK: ${{ secrets.HORIZON_ADMIN_WEBHOOK }}
-        run: uv run horizon-channel-push --date "$RUN_DATE" --language zh --exclude-channel-id review
+          XINXIANXING_ADMIN_WEBHOOK: ${{ secrets.XINXIANXING_ADMIN_WEBHOOK }}
+        run: uv run xinxianxing-channel-push --date "$RUN_DATE" --language zh --exclude-channel-id review

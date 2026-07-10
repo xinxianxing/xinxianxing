@@ -114,7 +114,7 @@ def test_review_channel_can_use_open_routing_when_enabled(tmp_path: Path) -> Non
         "template_type": "action_card",
         "free_webhook_secret_name": "CHANNEL_REVIEW_FREE_WEBHOOK",
         "paid_webhook_secret_name": "CHANNEL_REVIEW_PAID_WEBHOOK",
-        "admin_webhook_secret_name": "HORIZON_ADMIN_WEBHOOK",
+        "admin_webhook_secret_name": "XINXIANXING_ADMIN_WEBHOOK",
         "sources": [],
         "signal_types": [],
         "schedule": "daily_8am",

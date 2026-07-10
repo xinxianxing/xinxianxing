@@ -535,7 +535,7 @@ async def send_admin_notice(
 ) -> bool:
     """Send one system/admin notice to the admin webhook."""
     if _is_blank_or_unresolved_env_ref(admin_webhook_url):
-        logger.warning("HORIZON_ADMIN_WEBHOOK is not configured; cannot send admin notice.")
+        logger.warning("XINXIANXING_ADMIN_WEBHOOK is not configured; cannot send admin notice.")
         return False
 
     url = str(admin_webhook_url).strip()
@@ -576,7 +576,7 @@ async def send_admin_alert(
     """Send one channel-delivery failure alert to the admin webhook."""
     if _is_blank_or_unresolved_env_ref(admin_webhook_url):
         logger.warning(
-            "HORIZON_ADMIN_WEBHOOK is not configured; cannot alert channel failure for %s.",
+            "XINXIANXING_ADMIN_WEBHOOK is not configured; cannot alert channel failure for %s.",
             channel_id,
         )
         return False

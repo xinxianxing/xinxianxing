@@ -52,14 +52,14 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--signal-types", default="", help="Comma-separated signal types")
     parser.add_argument("--content-tags", default="", help="Comma-separated content tags")
     parser.add_argument("--dedupe-enabled", type=_bool_arg, default=True, help="true or false; default true")
-    parser.add_argument("--admin-secret", default="HORIZON_ADMIN_WEBHOOK", help="Admin alert secret name")
+    parser.add_argument("--admin-secret", default="XINXIANXING_ADMIN_WEBHOOK", help="Admin alert secret name")
     parser.add_argument("--free-secret", default="", help="Override free webhook secret name")
     parser.add_argument("--paid-secret", default="", help="Override paid webhook secret name")
     return parser
 
 
 def main() -> None:
-    """CLI entry point for horizon-channel-add."""
+    """CLI entry point for xinxianxing-channel-add."""
     load_dotenv()
     args = build_parser().parse_args()
     channel_id = normalize_channel_id(args.channel_id)

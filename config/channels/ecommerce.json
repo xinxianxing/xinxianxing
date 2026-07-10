@@ -8,7 +8,7 @@
   "template_type": "action_card",
   "free_webhook_secret_name": "CHANNEL_ECOMMERCE_FREE_WEBHOOK",
   "paid_webhook_secret_name": "CHANNEL_ECOMMERCE_PAID_WEBHOOK",
-  "admin_webhook_secret_name": "HORIZON_ADMIN_WEBHOOK",
+  "admin_webhook_secret_name": "XINXIANXING_ADMIN_WEBHOOK",
   "sources": [
     "reddit_ecommerce",
     "twitter"

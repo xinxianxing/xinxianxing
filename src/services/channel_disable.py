@@ -19,7 +19,7 @@ console = Console()
 
 async def _send_disable_notice(channel_id: str, channel_name: str) -> None:
     await send_admin_notice(
-        os.getenv("HORIZON_ADMIN_WEBHOOK"),
+        os.getenv("XINXIANXING_ADMIN_WEBHOOK"),
         title="信先行频道已停用",
         template="yellow",
         lines=[

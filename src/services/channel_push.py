@@ -435,7 +435,7 @@ def main() -> None:
                 date=args.date,
                 language=args.language,
                 data_dir=args.data_dir,
-                admin_webhook_url=os.getenv("HORIZON_ADMIN_WEBHOOK"),
+                admin_webhook_url=os.getenv("XINXIANXING_ADMIN_WEBHOOK"),
                 channel_ids=set(args.channel_id),
                 exclude_channel_ids=set(args.exclude_channel_id),
             )
