@@ -1,0 +1,198 @@
+{
+  "schema_version": 1,
+  "run_date": "2026-07-22",
+  "language": "zh",
+  "generated_at": "2026-07-21T22:47:43.583861+00:00",
+  "status": "drafted",
+  "fetched_count": 26,
+  "unique_count": 26,
+  "analyzed_count": 26,
+  "selected_count": 7,
+  "score_threshold": 6.0,
+  "source_counts": {
+    "reddit_promptengineering": 7
+  },
+  "signal_counts": {
+    "PRODUCTIVITY_TIP": 1,
+    "TUTORIAL": 6
+  },
+  "group_counts": {
+    "community": 7
+  },
+  "cards": [
+    {
+      "card_id": "reddit:subreddit-rss:t3_1v2uke0",
+      "source_type": "reddit",
+      "source_id": "reddit_promptengineering",
+      "title": "如何让GPT-4o写出承包商风格",
+      "source_url": "https://www.reddit.com/r/PromptEngineering/comments/1v2uke0/how_i_got_gpt4o_to_write_like_a_contractor_not_a/",
+      "signal_type": "TUTORIAL",
+      "score": 7.0,
+      "intro": "一位创始人分享了让 AI 输出像真实承包商报价而非管理咨询风格的具体方法。",
+      "how_to": [
+        "1. 用真实示例代替风格指令：给 AI 提供 3-4 个真实承包商报价截图，而不是告诉它“写得不正式”。",
+        "2. 将结构和内容分离：先让 AI 列出报价的各个部分（如工时、材料、总价），再填充具体内容。",
+        "3. 使用角色设定和约束：在系统提示中明确指定 AI 扮演的角色（如“你是一名有20年经验的承包商”）并限制输出格式。"
+      ],
+      "suitable_for": [
+        "需要生成行业特定文本的开发者",
+        "希望 AI 输出更接地气的创业者",
+        "使用 AI 撰写报价、提案或合同的人"
+      ],
+      "evidence": "未提供具体数据",
+      "credibility_risk": "该方法基于个人经验，效果可能因行业和具体用例而异；需要提供高质量的示例才能获得最佳结果。",
+      "content_tags": [],
+      "published_at": "2026-07-21T20:39:29+00:00"
+    },
+    {
+      "card_id": "reddit:subreddit-rss:t3_1v2r5oh",
+      "source_type": "reddit",
+      "source_id": "reddit_promptengineering",
+      "title": "防止AI编造Bug证据的提示词模式",
+      "source_url": "https://www.reddit.com/r/PromptEngineering/comments/1v2r5oh/a_prompt_pattern_for_stopping_ai_from_inventing/",
+      "signal_type": "TUTORIAL",
+      "score": 7.0,
+      "intro": "一种提示词约束方法，要求AI在修复Bug前对每个重要声明标注状态（观察、验证、推断、未知），从而避免编造证据。",
+      "how_to": [
+        "在提示词中要求AI对每个重要声明标注为：OBSERVED（直接来自报告或工具输出）、VERIFIED（独立复现或确认）、INFERRED（基于证据的推断）、UNKNOWN（缺失或未测试的事实）。",
+        "禁止AI声称复现、根因、测试成功或生产行为，除非标注为VERIFIED。",
+        "在提出修复前，要求AI：重述预期与实际行为；列出最少缺失事实；生成复现步骤或非复现矩阵；对比失败路径与一个工作控制；以条件+机制+证据形式陈述最小支持原因；提出最小修复和回归不变性。",
+        "如果所需事实不可用，要求AI询问或标记结论为不确定。"
+      ],
+      "suitable_for": [
+        "软件开发者",
+        "Bug分类人员",
+        "使用AI辅助调试的工程师",
+        "需要提高AI输出可审查性的场景"
+      ],
+      "evidence": "未提供具体数据",
+      "credibility_risk": "该方法需要用户自行编写提示词并测试效果；实际效果可能因模型和任务复杂度而异。",
+      "content_tags": [],
+      "published_at": "2026-07-21T18:38:25+00:00"
+    },
+    {
+      "card_id": "reddit:subreddit-rss:t3_1v2oglo",
+      "source_type": "reddit",
+      "source_id": "reddit_promptengineering",
+      "title": "用一个提示词把ChatGPT从写作工具变成辅导老师",
+      "source_url": "https://www.reddit.com/r/PromptEngineering/comments/1v2oglo/stop_letting_chatgpt_be_an_ai_writing_tool_for/",
+      "signal_type": "TUTORIAL",
+      "score": 7.0,
+      "intro": "一个提示词，让ChatGPT从代写作业的AI工具变成引导你学习的辅导老师。",
+      "how_to": [
+        "将以下提示词输入ChatGPT：'You are my tutor, not my ghostwriter. I'm learning [topic]. Never write my assignment or give me paragraphs I can paste. Explain the core idea once, simply. Then ask me to explain it back. When I'm wrong, don't fix it. Ask a question that makes me find the gap. Keep going until I can teach it to you.'",
+        "将[topic]替换为你正在学习的具体主题。",
+        "按照ChatGPT的引导，先听它解释核心概念，然后用自己的话复述，回答它提出的问题，直到你能教会它为止。"
+      ],
+      "suitable_for": [
+        "学生（尤其是本科生）",
+        "自学新知识的人",
+        "希望深入理解而非应付作业的学习者"
+      ],
+      "evidence": "未提供具体数据",
+      "credibility_risk": "该方法需要学习者主动参与，效果取决于个人投入程度；ChatGPT的引导质量可能因模型版本和主题而异。",
+      "content_tags": [],
+      "published_at": "2026-07-21T17:05:32+00:00"
+    },
+    {
+      "card_id": "reddit:subreddit-rss:t3_1v2nipn",
+      "source_type": "reddit",
+      "source_id": "reddit_promptengineering",
+      "title": "大纲提示词决定幻灯片质量",
+      "source_url": "https://www.reddit.com/r/PromptEngineering/comments/1v2nipn/the_outline_prompt_decides_your_slide_deck_not/",
+      "signal_type": "TUTORIAL",
+      "score": 7.0,
+      "intro": "一个用于生成幻灯片大纲的提示词模板，强调先定大纲再生成内容，避免工具输出质量差的问题。",
+      "how_to": [
+        "在生成幻灯片前，先运行以下大纲提示词：",
+        "提示词模板：'You are structuring a presentation outline. Do NOT write slide content yet. Topic: [topic] Audience: [who they are and what they already know] Goal: [the ONE thing they should do or believe after] Length: [N] slides, hard cap. Rules: - One idea per slide. If a slide has two ideas, split it. - Each slide = a short assertive headline (the takeaway, not a label) + max 3 supporting points. - No \"Introduction\" or \"Conclusion\" filler slides. Open on the stakes, close on the ask. - Order the slides as an argument, each one earning the next. Output a numbered list: slide number, headline, 3 bullets max.'",
+        "将生成的提纲粘贴到任何幻灯片生成工具中，即可获得结构清晰的初稿。"
+      ],
+      "suitable_for": [
+        "需要制作演示文稿的职场人士",
+        "使用AI幻灯片生成工具但效果不佳的用户",
+        "希望提升幻灯片逻辑性和说服力的演讲者"
+      ],
+      "evidence": "未提供具体数据",
+      "credibility_risk": "提示词效果取决于用户对主题、受众和目标的清晰定义；不同工具对提示词的解析能力可能有差异。",
+      "content_tags": [],
+      "published_at": "2026-07-21T16:32:22+00:00"
+    },
+    {
+      "card_id": "reddit:subreddit-rss:t3_1v2gtg4",
+      "source_type": "reddit",
+      "source_id": "reddit_promptengineering",
+      "title": "API返回200但任务失败：验证AI Agent完成度",
+      "source_url": "https://www.reddit.com/r/PromptEngineering/comments/1v2gtg4/my_agent_got_a_200_and_still_managed_to_fuck_up/",
+      "signal_type": "TUTORIAL",
+      "score": 7.0,
+      "intro": "一个AI Agent调用API返回200但实际业务状态错误的案例，教你如何通过定义后置条件来验证Agent的可靠性。",
+      "how_to": [
+        "1. 在测试前明确期望的后置条件：对象是否存在、可见范围、状态、是否允许重复。",
+        "2. 将工作流和测试对话并排放置，检查提示词是否只描述了动作而未定义‘完成’的标准。",
+        "3. 使用工具（如Enter Pro's Agent Builder）时，手动验证外部系统的实际状态，不要仅依赖API返回码。",
+        "4. 针对并发写入和延迟问题，增加重试和状态校验逻辑。"
+      ],
+      "suitable_for": [
+        "AI Agent开发者",
+        "提示词工程师",
+        "自动化工作流设计者",
+        "需要验证Agent可靠性的测试人员"
+      ],
+      "evidence": "未提供具体数据",
+      "credibility_risk": "该方法基于个人经验，具体工具（Enter Pro's Agent Builder）可能不通用；需要用户自行调整验证步骤。",
+      "content_tags": [],
+      "published_at": "2026-07-21T12:19:42+00:00"
+    },
+    {
+      "card_id": "reddit:subreddit-rss:t3_1v29aus",
+      "source_type": "reddit",
+      "source_id": "reddit_promptengineering",
+      "title": "最小线索提示词检验真实知识",
+      "source_url": "https://www.reddit.com/r/PromptEngineering/comments/1v29aus/this_prompt_exposes_whether_you_actually_know/",
+      "signal_type": "TUTORIAL",
+      "score": 7.0,
+      "intro": "一个提示词技巧，通过给出最小线索来测试你是否真正理解某个概念，而非仅仅识别它。",
+      "how_to": [
+        "将以下提示词粘贴到ChatGPT、Claude、Perplexity、Gemini或NotebookLM等AI工具中：",
+        "\"Test my genuine knowledge of [TOPIC] in [SUBJECT] using the Minimum Viable Clue protocol. PROTOCOL: Ask me to recall or explain a concept, but give me the minimum possible clue — just enough that the question is fair, but not so much that it makes recall easy. For example: instead of 'Explain the process of photosynthesis,' use 'What happens when a leaf does its primary job?' After my answer, show me what a full-mark answer looks like and what I included vs. missed. Track a 'generative accuracy' score: percentage of required points I hit.\"",
+        "用你的具体主题和科目替换 [TOPIC] 和 [SUBJECT]。",
+        "回答AI提出的问题，然后查看AI给出的满分答案以及你的遗漏点。",
+        "根据生成的准确性分数（生成准确性百分比）评估自己的掌握程度。"
+      ],
+      "suitable_for": [
+        "学生备考",
+        "自学者检验知识掌握度",
+        "需要区分“识别”与“生成”能力的学习者"
+      ],
+      "evidence": "未提供具体数据",
+      "credibility_risk": "提示词效果取决于AI模型和主题复杂度；生成准确性分数可能因AI评分标准不同而有偏差。",
+      "content_tags": [],
+      "published_at": "2026-07-21T05:32:21+00:00"
+    },
+    {
+      "card_id": "reddit:subreddit-rss:t3_1v2asgc",
+      "source_type": "reddit",
+      "source_id": "reddit_promptengineering",
+      "title": "Jinja2 模板的三项解析时安全检查",
+      "source_url": "https://www.reddit.com/r/PromptEngineering/comments/1v2asgc/the_three_parsetime_checks_we_run_on_template/",
+      "signal_type": "PRODUCTIVITY_TIP",
+      "score": 6.0,
+      "intro": "在 FastAPI 应用中，对用户编写的 Jinja2 模板进行三项解析时检查，防止资源耗尽攻击。",
+      "how_to": [
+        "1. 检查模板中是否包含可能导致大量内存分配的模式，如 {{ ''|center(999999999) }}。",
+        "2. 限制模板中循环、递归或字符串操作的参数大小。",
+        "3. 在渲染前对模板进行静态分析，拒绝超出资源阈值的模板。"
+      ],
+      "suitable_for": [
+        "使用 Jinja2 或类似模板引擎的开发者",
+        "需要防范资源耗尽攻击的 Web 应用",
+        "运行在内存受限环境（如 512MB 容器）中的服务"
+      ],
+      "evidence": "未提供具体数据",
+      "credibility_risk": "该方法针对特定威胁模型（用户可编写模板），不适用于所有场景；实现细节需根据自身应用调整。",
+      "content_tags": [],
+      "published_at": "2026-07-21T06:54:40+00:00"
+    }
+  ]
+}
