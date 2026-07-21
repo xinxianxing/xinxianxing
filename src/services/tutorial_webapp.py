@@ -14,7 +14,6 @@ from src.services.manual_add import ManualAddError, fetch_url_as_item
 from src.services.tutorials import (
     TUTORIAL_CATEGORIES,
     TUTORIAL_FIELD_LABELS,
-    TUTORIAL_SECTION_FIELDS,
     write_tutorial_draft,
 )
 

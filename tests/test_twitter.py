@@ -518,7 +518,7 @@ def test_fetch_replies_appends_top_comments(monkeypatch):
     assert "alice" in reply_lines[0]
     assert "Interesting take!" in reply_lines[0]
     # dave (0 likes) filtered out
-    assert not any("dave" in l for l in reply_lines)
+    assert not any("dave" in line for line in reply_lines)
 
 
 def test_fetch_replies_missing_token_returns_empty(monkeypatch):

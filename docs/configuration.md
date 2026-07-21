@@ -665,7 +665,10 @@ Example channel file:
 - `schedule`: Currently `daily_8am`.
 - `max_items_per_push`: Maximum cards sent to this channel per push.
 - `min_score`: Minimum score for this channel.
-- `dedupe_enabled`: Reserved for channel-level dedupe controls.
+- `dedupe_enabled`: Prevents a successfully delivered daily channel message
+  from being sent again for the same date, language, logical channel and
+  destination. Use `xinxianxing-channel-push --force` only when you
+  deliberately need to resend it.
 - `content_tags`: Reusable routing tags for fan-out. Multiple channels can share tags; one generated Action Card is reused and sent to every active matching channel without another AI call.
 
 The bundled `review` channel is intentionally broad: empty `content_tags`,
@@ -689,6 +692,12 @@ scraping or AI analysis:
 
 ```bash
 uv run xinxianxing-channel-push --date 2026-07-09 --language zh
+```
+
+Use `--force` to deliberately resend a channel after a successful delivery:
+
+```bash
+uv run xinxianxing-channel-push --date 2026-07-09 --language zh --channel-id ai_tools --force
 ```
 
 ### Delivery Modes And Layouts
@@ -854,6 +863,7 @@ Actions Secrets, and commits generated review artifacts:
 - `docs/_drafts/`
 - `docs/drafts/`
 - `data/share_images/`
+- `data/runs/` (structured Action Card manifest and run statistics)
 
 The workflow explicitly checks that `publishing.auto_publish` is `false` and
 fails if `docs/_posts/` is changed. Moving reviewed drafts into `docs/_posts/`
@@ -879,6 +889,10 @@ Required or recommended GitHub Actions Secrets for channel delivery:
 - `CHANNEL_ECOMMERCE_FREE_WEBHOOK`: Free/public ecommerce group webhook. The bundled ecommerce channel is inactive until enabled.
 - `CHANNEL_ECOMMERCE_PAID_WEBHOOK`: Paid/member ecommerce group webhook. The bundled ecommerce channel is inactive until enabled.
 - `XINXIANXING_ADMIN_WEBHOOK`: Admin-only Feishu/Lark bot URL for system alerts such as failed channel pushes, channel tests, and disable notifications.
+- `SUPABASE_URL`: Optional Supabase project URL for the operations ledger.
+- `SUPABASE_SERVICE_ROLE_KEY`: Optional server-side Supabase key. Store it
+  only in GitHub Secrets or local `.env`, never in a public config file or
+  browser JavaScript.
 
 Backward-compatible optional legacy delivery secrets:
 
@@ -894,6 +908,27 @@ Backward-compatible optional legacy delivery secrets:
 
 If either Cloudflare secret is missing, the daily workflow still generates and
 commits drafts, but skips Cloudflare deployment with a warning.
+
+### Operations Ledger (Supabase Optional)
+
+信先行 always writes a structured daily run manifest to
+`data/runs/xinxianxing-YYYY-MM-DD-zh.json`, a Git-tracked delivery state file
+beside it, and a local SQLite delivery ledger at `data/operations.sqlite3`.
+The manifest contains the selected Action Cards, source and signal counts, and
+filtering statistics. Delivery records contain only channel id, destination,
+status, item count, timestamp and error text; they never save webhook URLs.
+
+To mirror this state to Supabase, create a free Supabase project, open SQL
+Editor, and run [`supabase/schema.sql`](../supabase/schema.sql). Then add
+`SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` to local `.env` and GitHub
+Actions Secrets. The service role key is used by trusted automation only. If
+Supabase is unavailable or not configured, the daily pipeline continues with
+the local manifest and SQLite ledger.
+
+GitHub Actions also sends `XINXIANXING_ADMIN_WEBHOOK` a concise card whenever
+the generate-draft or push-channels job fails, including a direct Actions-log
+link. This covers setup and dependency failures that occur before the normal
+channel-level alert code can run.
 
 `.github/workflows/deploy-docs.yml` also builds and deploys the Cloudflare site
 when `docs/**` or the Cloudflare build script changes. This covers manual

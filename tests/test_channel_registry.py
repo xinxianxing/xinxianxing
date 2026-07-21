@@ -98,8 +98,39 @@ def test_check_channel_lists_missing_secrets(tmp_path: Path) -> None:
     assert result.errors == []
     assert result.missing_secrets == [
         "CHANNEL_AI_TOOLS_PARTNER_001_FREE_WEBHOOK",
-        "CHANNEL_AI_TOOLS_PARTNER_001_PAID_WEBHOOK",
     ]
+    assert (
+        "会员（可选）未配置：CHANNEL_AI_TOOLS_PARTNER_001_PAID_WEBHOOK"
+        in result.warnings
+    )
+
+
+def test_check_channel_rejects_unknown_source_when_enabling(tmp_path: Path) -> None:
+    channels_dir = tmp_path / "config" / "channels"
+    write_channel_file(
+        ChannelFileConfig(
+            channel_id="ecommerce",
+            channel_name="信先行·电商运营",
+            active=False,
+            category="ecommerce",
+            free_webhook_secret_name="CHANNEL_ECOMMERCE_FREE_WEBHOOK",
+            paid_webhook_secret_name="",
+            sources=["reddit_ecommerce"],
+            signal_types=["TUTORIAL"],
+        ),
+        channels_dir=channels_dir,
+    )
+
+    result = check_channel(
+        "ecommerce",
+        channels_dir=channels_dir,
+        env={"CHANNEL_ECOMMERCE_FREE_WEBHOOK": "https://example.com/free"},
+        for_enable=True,
+        source_ids={"twitter", "reddit_artificial"},
+    )
+
+    assert any("reddit_ecommerce" in error for error in result.errors)
+    assert result.can_enable is False
 
 
 def test_runtime_channels_accept_legacy_self_operated_secret_aliases(tmp_path: Path) -> None:

@@ -87,7 +87,7 @@ def main() -> None:
     console.print("[yellow]默认不会自动启用；启用前请配置 GitHub Secrets 并运行 check。[/yellow]")
     console.print("需要新增 GitHub Secrets：")
     console.print(f"- {channel.free_webhook_secret_name}")
-    console.print(f"- {channel.paid_webhook_secret_name}")
+    console.print(f"- {channel.paid_webhook_secret_name}（可选，会员群启用时再填）")
     console.print(f"- {channel.admin_webhook_secret_name}")
 
 

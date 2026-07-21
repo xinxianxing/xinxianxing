@@ -15,7 +15,6 @@ from zoneinfo import ZoneInfo
 from dotenv import load_dotenv
 from rich.console import Console
 
-from ..ai.summarizer import DailySummarizer
 from ..models import ContentItem, SignalType, SourceType, WebhookConfig
 from ..storage.manager import StorageManager
 from .webhook import (
@@ -23,6 +22,7 @@ from .webhook import (
     WebhookNotifier,
     send_admin_alert,
 )
+from .operations import DeliveryKey, OperationsLedger
 
 
 console = Console()
@@ -135,6 +135,7 @@ async def push_draft_channels(
     admin_webhook_url: str | None = None,
     channel_ids: set[str] | None = None,
     exclude_channel_ids: set[str] | None = None,
+    force: bool = False,
 ) -> int:
     """Push one daily draft to all matching active channels.
 
@@ -198,7 +199,20 @@ async def push_draft_channels(
 
     failures: list[ChannelPushFailure] = []
     sent_count = 0
+    ledger = OperationsLedger(data_dir=data_dir)
     for channel, message in messages:
+        destination_type = channel.destination_type or "free"
+        delivery_key = DeliveryKey(
+            run_date=date,
+            language=language,
+            channel_id=channel.logical_channel_id or channel.id,
+            destination_type=destination_type,
+        )
+        if channel.dedupe_enabled and not force and ledger.already_delivered(delivery_key):
+            console.print(
+                f"[yellow]跳过已成功推送的频道：{channel.name} ({destination_type})[/yellow]"
+            )
+            continue
         try:
             await notifier.notify_channel_feishu(
                 channel,
@@ -206,6 +220,12 @@ async def push_draft_channels(
                 raise_on_error=True,
             )
             sent_count += 1
+            ledger.record_delivery(
+                delivery_key,
+                channel_name=channel.name,
+                item_count=_message_item_count(message),
+                status="success",
+            )
         except WebhookDeliveryError as exc:
             failed_at = datetime.now(timezone.utc)
             failure = ChannelPushFailure(
@@ -215,6 +235,13 @@ async def push_draft_channels(
                 failed_at=failed_at,
             )
             failures.append(failure)
+            ledger.record_delivery(
+                delivery_key,
+                channel_name=channel.name,
+                item_count=_message_item_count(message),
+                status="failed",
+                error=str(exc),
+            )
             await send_admin_alert(
                 admin_webhook_url,
                 channel_id=channel.id,
@@ -223,6 +250,9 @@ async def push_draft_channels(
                 failed_at=failed_at,
             )
 
+        if warning := ledger.take_warning():
+            console.print(f"[yellow]⚠️  {warning}[/yellow]")
+
     if failures:
         raise ChannelPushError(failures)
     return sent_count
@@ -230,6 +260,16 @@ async def push_draft_channels(
 
 def _default_date() -> str:
     return datetime.now(ZoneInfo("Asia/Shanghai")).strftime("%Y-%m-%d")
+
+
+def _message_item_count(message: dict) -> int:
+    """Read the selected-card count from the compact Feishu markdown body."""
+    try:
+        content = message["card"]["body"]["elements"][0]["content"]
+    except (KeyError, IndexError, TypeError):
+        return 0
+    match = re.search(r"(?:^|\n)(\d+)\s+(?:条符合|items matched)", str(content))
+    return int(match.group(1)) if match else 0
 
 
 def _clean_text(value: object) -> str:
@@ -427,6 +467,11 @@ def main() -> None:
         default=[],
         help="Skip the specified channel id. Repeat for multiple ids.",
     )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Resend even when this channel already has a successful delivery record.",
+    )
     args = parser.parse_args()
 
     try:
@@ -438,6 +483,7 @@ def main() -> None:
                 admin_webhook_url=os.getenv("XINXIANXING_ADMIN_WEBHOOK"),
                 channel_ids=set(args.channel_id),
                 exclude_channel_ids=set(args.exclude_channel_id),
+                force=args.force,
             )
         )
     except Exception as exc:

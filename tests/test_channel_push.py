@@ -305,3 +305,79 @@ def test_push_draft_channels_can_exclude_review_channel(tmp_path: Path) -> None:
     mock_push.assert_awaited_once()
     sent_channel = mock_push.call_args.args[0]
     assert sent_channel.id == "ai-tools"
+
+
+def test_push_draft_channels_skips_a_successful_daily_delivery(tmp_path: Path) -> None:
+    data_dir = tmp_path / "data"
+    drafts_dir = data_dir / "drafts"
+    drafts_dir.mkdir(parents=True)
+    (drafts_dir / "xinxianxing-2026-07-09-zh.md").write_text(
+        SAMPLE_DRAFT,
+        encoding="utf-8",
+    )
+    config = {
+        "version": "1.0",
+        "site": {"base_url": "https://xinxianxing.com"},
+        "ai": {
+            "provider": "deepseek",
+            "model": "deepseek-chat",
+            "api_key_env": "DEEPSEEK_API_KEY",
+        },
+        "sources": {},
+        "filtering": {
+            "ai_score_threshold": 6.0,
+            "time_window_hours": 24,
+            "category_groups": {},
+            "default_group": "other",
+        },
+        "publishing": {"auto_publish": False},
+        "webhook": {
+            "enabled": True,
+            "url_env": None,
+            "platform": "generic",
+            "layout": "markdown",
+        },
+        "channels": [
+            {
+                "id": "ai-tools",
+                "name": "信先行·AI工具",
+                "webhook_url": "https://example.com/ai-tools",
+                "content_tags": ["ai", "tutorial"],
+                "sources": ["reddit_promptengineering"],
+                "signal_types": ["TUTORIAL"],
+                "min_score": 6.0,
+                "active": True,
+            }
+        ],
+    }
+    (data_dir / "config.json").write_text(
+        json.dumps(config, ensure_ascii=False),
+        encoding="utf-8",
+    )
+
+    with patch.object(
+        WebhookNotifier,
+        "notify_channel_feishu",
+        new_callable=AsyncMock,
+        return_value=True,
+    ) as mock_push:
+        import asyncio
+
+        first = asyncio.run(
+            push_draft_channels(
+                date="2026-07-09",
+                language="zh",
+                data_dir=data_dir,
+            )
+        )
+        second = asyncio.run(
+            push_draft_channels(
+                date="2026-07-09",
+                language="zh",
+                data_dir=data_dir,
+            )
+        )
+
+    assert first == 1
+    assert second == 0
+    mock_push.assert_awaited_once()

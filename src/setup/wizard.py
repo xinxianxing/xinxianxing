@@ -1,9 +1,7 @@
 """Interactive setup wizard for Xinxianxing configuration."""
 
-import json
 import os
 import sys
-from pathlib import Path
 from typing import Dict, List, Optional
 
 from dotenv import load_dotenv
@@ -90,7 +88,7 @@ def configure_ai() -> Optional[AIConfig]:
         "Output languages (comma-separated)",
         default="zh,en",
     )
-    lang_list = [l.strip() for l in languages.split(",") if l.strip()]
+    lang_list = [language.strip() for language in languages.split(",") if language.strip()]
 
     return AIConfig(
         provider=provider_enum,
@@ -206,7 +204,6 @@ def build_config(
     reddit_subreddits = []
     reddit_users = []
     telegram_channels = []
-    hn_enabled = False
 
     for src in selected_sources:
         src_type = src.get("type", "")
@@ -248,9 +245,6 @@ def build_config(
                 channel=cfg.get("channel", ""),
                 fetch_limit=cfg.get("fetch_limit", 20),
             ))
-        elif src_type == "hackernews":
-            hn_enabled = True
-
     # Always include HackerNews as a universal source
     hn_config = HackerNewsConfig(
         enabled=True,

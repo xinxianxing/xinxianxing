@@ -1,7 +1,6 @@
 """Twitter scraper using Playwright + Cookie (replaces Apify)."""
 
 import asyncio
-import glob
 import hashlib
 import json
 import logging

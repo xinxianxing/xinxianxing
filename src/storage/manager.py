@@ -60,11 +60,13 @@ class StorageManager:
         self.summaries_dir = self.data_dir / "summaries"
         self.drafts_dir = self.data_dir / "drafts"
         self.share_images_dir = self.data_dir / "share_images"
+        self.runs_dir = self.data_dir / "runs"
 
         self.data_dir.mkdir(parents=True, exist_ok=True)
         self.summaries_dir.mkdir(parents=True, exist_ok=True)
         self.drafts_dir.mkdir(parents=True, exist_ok=True)
         self.share_images_dir.mkdir(parents=True, exist_ok=True)
+        self.runs_dir.mkdir(parents=True, exist_ok=True)
 
     def load_config(self) -> Config:
         if not self.config_path.exists():
@@ -135,6 +137,20 @@ class StorageManager:
         with open(filepath, "w", encoding="utf-8") as f:
             f.write(markdown)
 
+        return filepath
+
+    def save_run_manifest(
+        self,
+        date: str,
+        manifest: dict[str, Any],
+        language: str = "en",
+    ) -> Path:
+        """Save the structured cards used by delivery and operations tooling."""
+        filename = f"xinxianxing-{date}-{language}.json"
+        filepath = self.runs_dir / filename
+        with open(filepath, "w", encoding="utf-8") as f:
+            json.dump(manifest, f, ensure_ascii=False, indent=2, default=str)
+            f.write("\n")
         return filepath
 
     def load_subscribers(self) -> list:

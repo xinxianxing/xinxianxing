@@ -108,6 +108,8 @@ jobs:
         env:
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
           APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: uv run xinxianxing --hours 24 --date "$RUN_DATE" --skip-webhook
 
       - name: Ensure published posts were not changed
@@ -123,8 +125,8 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          mkdir -p data/drafts docs/_drafts docs/drafts data/share_images
-          git add data/drafts/ docs/_drafts/ docs/drafts/ data/share_images/
+          mkdir -p data/drafts docs/_drafts docs/drafts data/share_images data/runs
+          git add data/drafts/ docs/_drafts/ docs/drafts/ data/share_images/ data/runs/
 
           if git diff --cached --quiet; then
             echo "No generated draft or share image changes to commit."
@@ -165,7 +167,22 @@ jobs:
           CHANNEL_REVIEW_FREE_WEBHOOK: ${{ secrets.CHANNEL_REVIEW_FREE_WEBHOOK || secrets.CHANNEL_REVIEW_WEBHOOK }}
           CHANNEL_REVIEW_PAID_WEBHOOK: ${{ secrets.CHANNEL_REVIEW_PAID_WEBHOOK }}
           XINXIANXING_ADMIN_WEBHOOK: ${{ secrets.XINXIANXING_ADMIN_WEBHOOK }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: uv run xinxianxing-channel-push --date "$RUN_DATE" --language zh --channel-id review
+
+      - name: Commit review delivery ledger
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/runs/
+          if git diff --cached --quiet; then
+            echo "No review delivery ledger changes to commit."
+            exit 0
+          fi
+          git commit -m "chore: record review delivery ${RUN_DATE}"
+          git push
 
   push-channels:
     needs: generate-draft
@@ -180,7 +197,7 @@ jobs:
       }}
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
       TZ: Asia/Shanghai
@@ -263,4 +280,40 @@ jobs:
           CHANNEL_ECOMMERCE_FREE_WEBHOOK: ${{ secrets.CHANNEL_ECOMMERCE_FREE_WEBHOOK }}
           CHANNEL_ECOMMERCE_PAID_WEBHOOK: ${{ secrets.CHANNEL_ECOMMERCE_PAID_WEBHOOK }}
           XINXIANXING_ADMIN_WEBHOOK: ${{ secrets.XINXIANXING_ADMIN_WEBHOOK }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: uv run xinxianxing-channel-push --date "$RUN_DATE" --language zh --exclude-channel-id review
+
+      - name: Commit channel delivery ledger
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/runs/
+          if git diff --cached --quiet; then
+            echo "No channel delivery ledger changes to commit."
+            exit 0
+          fi
+          git commit -m "chore: record channel delivery ${RUN_DATE}"
+          git push
+
+  notify-failure:
+    needs: [generate-draft, push-channels]
+    if: >-
+      ${{
+        always() &&
+        (needs.generate-draft.result == 'failure' || needs.push-channels.result == 'failure')
+      }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      XINXIANXING_ADMIN_WEBHOOK: ${{ secrets.XINXIANXING_ADMIN_WEBHOOK }}
+      GENERATE_RESULT: ${{ needs.generate-draft.result }}
+      PUSH_RESULT: ${{ needs.push-channels.result }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Send administrator failure alert
+        run: python3 scripts/send_workflow_failure_alert.py

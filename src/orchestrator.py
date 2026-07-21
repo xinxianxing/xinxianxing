@@ -14,6 +14,7 @@ from .storage.manager import StorageManager
 from .services.email import EmailManager
 from .services.webhook import WebhookNotifier
 from .services.share_image import generate_share_image
+from .services.operations import OperationsLedger, build_run_manifest
 from .scrapers.github import GitHubScraper
 from .scrapers.hackernews import HackerNewsScraper
 from .scrapers.rss import RSSScraper
@@ -54,6 +55,11 @@ class XinxianxingOrchestrator:
         self.config = config
         self.storage = storage
         self.console = Console()
+        self.operations_ledger = (
+            OperationsLedger(storage.data_dir)
+            if hasattr(storage, "data_dir")
+            else None
+        )
         self.email_manager = EmailManager(config.email, console=self.console) if config.email else None
         self.webhook_notifier = (
             WebhookNotifier(
@@ -172,6 +178,23 @@ class XinxianxingOrchestrator:
                     self.console.print(f"📝 Saved {lang.upper()} draft for review to: {summary_path}\n")
                     if lang == "zh" or share_image_draft_path is None:
                         share_image_draft_path = summary_path
+
+                manifest = build_run_manifest(
+                    run_date=today,
+                    language=lang,
+                    fetched_count=len(all_items),
+                    unique_count=len(merged_items),
+                    analyzed_count=len(analyzed_items),
+                    score_threshold=threshold,
+                    selected_items=important_items,
+                    group_counts=balanced_result.group_counts,
+                )
+                manifest_path = self.storage.save_run_manifest(today, manifest, language=lang)
+                self.console.print(f"📊 Saved {lang.upper()} run manifest to: {manifest_path}\n")
+                if self.operations_ledger:
+                    self.operations_ledger.record_run(manifest)
+                    if warning := self.operations_ledger.take_warning():
+                        self.console.print(f"[yellow]⚠️  {warning}[/yellow]\n")
 
                 # Copy to docs/_drafts by default. Only copy to _posts when explicitly enabled.
                 # A docs/drafts copy gives webhook recipients a public review preview

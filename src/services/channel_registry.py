@@ -15,6 +15,7 @@ from ..models import ChannelConfig, ChannelFileConfig
 
 
 CHANNELS_DIR = Path("config/channels")
+DEFAULT_DATA_CONFIG_PATH = Path("data/config.json")
 SUPPORTED_TEMPLATE_TYPES = {"action_card"}
 SUPPORTED_SCHEDULES = {"daily_8am"}
 LEGACY_SECRET_ALIASES: dict[str, tuple[str, ...]] = {
@@ -243,12 +244,58 @@ def duplicate_channel_ids(channels_dir: Path = CHANNELS_DIR) -> set[str]:
     return duplicates
 
 
+def configured_source_ids(
+    config_path: Path = DEFAULT_DATA_CONFIG_PATH,
+) -> set[str] | None:
+    """Return source ids declared in the active data config.
+
+    ``None`` means the config cannot be inspected, which keeps standalone
+    channel-file checks useful before a project config has been created.
+    """
+    try:
+        raw = json.loads(config_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+
+    sources = raw.get("sources")
+    if not isinstance(sources, dict):
+        return set()
+
+    ids = {"manual"}
+
+    def add_id(value: object, fallback: str = "") -> None:
+        if isinstance(value, dict):
+            source_id = str(value.get("id") or fallback).strip().lower()
+            if source_id:
+                ids.add(source_id)
+
+    add_id(sources.get("hackernews"), "hackernews")
+    add_id(sources.get("twitter"), "twitter")
+    add_id(sources.get("ossinsight"), "ossinsight")
+    add_id(sources.get("openbb"), "openbb")
+
+    for key in ("github", "rss"):
+        for value in sources.get(key, []) or []:
+            add_id(value)
+
+    for value in (sources.get("reddit") or {}).get("subreddits", []) or []:
+        add_id(value)
+    for value in (sources.get("reddit") or {}).get("users", []) or []:
+        add_id(value)
+    for value in (sources.get("telegram") or {}).get("channels", []) or []:
+        add_id(value)
+    for value in (sources.get("openbb") or {}).get("watchlists", []) or []:
+        add_id(value)
+    return ids
+
+
 def check_channel(
     channel_id: str,
     *,
     channels_dir: Path = CHANNELS_DIR,
     env: Mapping[str, str] | None = None,
     for_enable: bool = False,
+    source_ids: set[str] | None = None,
 ) -> ChannelCheckResult:
     """Validate one channel config and list missing secrets."""
     env = env if env is not None else os.environ
@@ -293,16 +340,36 @@ def check_channel(
     if not channel.admin_webhook_secret_name:
         result.warnings.append("admin_webhook_secret_name 为空")
 
-    webhook_secrets = [
-        channel.free_webhook_secret_name,
-        channel.paid_webhook_secret_name,
-    ]
-    for secret_name in webhook_secrets:
+    available_source_ids = source_ids if source_ids is not None else configured_source_ids()
+    if available_source_ids is not None:
+        unknown_sources = sorted(
+            {
+                source.strip()
+                for source in channel.sources
+                if source.strip()
+                and source.strip().lower() not in available_source_ids
+            }
+        )
+        if unknown_sources:
+            message = f"未在 data/config.json 找到信源：{', '.join(unknown_sources)}"
+            if channel.active or for_enable:
+                result.errors.append(message)
+            else:
+                result.warnings.append(message)
+
+    for destination, secret_name in (
+        ("免费", channel.free_webhook_secret_name),
+        ("会员（可选）", channel.paid_webhook_secret_name),
+    ):
         secret = secret_name.strip()
         if not secret:
-            result.missing_secrets.append("<empty webhook secret name>")
+            if destination == "免费":
+                result.missing_secrets.append("<empty free webhook secret name>")
         elif not resolve_secret_value(secret, env):
-            result.missing_secrets.append(secret)
+            if destination == "免费":
+                result.missing_secrets.append(secret)
+            else:
+                result.warnings.append(f"{destination}未配置：{secret}")
 
     require_active_ready = channel.active or for_enable
     if require_active_ready:
