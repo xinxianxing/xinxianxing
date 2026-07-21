@@ -118,3 +118,28 @@ def test_operations_ledger_falls_back_when_supabase_is_unavailable(
     assert "已保留本地记录" in (ledger.take_warning() or "")
     with closing(sqlite3.connect(ledger.sqlite_path)) as conn:
         assert conn.execute("SELECT COUNT(*) FROM pipeline_runs").fetchone() == (1,)
+
+
+def test_supabase_headers_support_new_and_legacy_server_keys(tmp_path) -> None:
+    new_key_ledger = OperationsLedger(
+        tmp_path / "new",
+        env={
+            "SUPABASE_URL": "https://example.supabase.co",
+            "SUPABASE_SERVICE_ROLE_KEY": "sb_secret_example",
+        },
+    )
+    legacy_key_ledger = OperationsLedger(
+        tmp_path / "legacy",
+        env={
+            "SUPABASE_URL": "https://example.supabase.co",
+            "SUPABASE_SERVICE_ROLE_KEY": "legacy-service-role-jwt",
+        },
+    )
+
+    assert new_key_ledger._supabase_headers() == {
+        "apikey": "sb_secret_example",
+        "Content-Type": "application/json",
+    }
+    assert legacy_key_ledger._supabase_headers()["Authorization"] == (
+        "Bearer legacy-service-role-jwt"
+    )

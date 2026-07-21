@@ -431,11 +431,7 @@ class OperationsLedger:
     ) -> httpx.Response:
         if not self.supabase_enabled:
             raise ValueError("Supabase is not configured")
-        headers = {
-            "apikey": self.supabase_key,
-            "Authorization": f"Bearer {self.supabase_key}",
-            "Content-Type": "application/json",
-        }
+        headers = self._supabase_headers()
         headers.update(extra_headers or {})
         with httpx.Client(timeout=self.timeout) as client:
             response = client.request(
@@ -447,6 +443,18 @@ class OperationsLedger:
             )
         response.raise_for_status()
         return response
+
+    def _supabase_headers(self) -> dict[str, str]:
+        """Build headers for both new secret keys and legacy service-role JWTs."""
+        headers = {
+            "apikey": self.supabase_key,
+            "Content-Type": "application/json",
+        }
+        # New sb_secret keys are API keys, not JWTs. Supabase rejects them in
+        # Authorization headers; legacy service_role JWTs still require it.
+        if not self.supabase_key.startswith("sb_secret_"):
+            headers["Authorization"] = f"Bearer {self.supabase_key}"
+        return headers
 
     def _disable_supabase(self, message: str) -> None:
         self._supabase_disabled = True
