@@ -171,6 +171,45 @@ def test_operations_ledger_falls_back_when_supabase_is_unavailable(
         assert conn.execute("SELECT COUNT(*) FROM pipeline_runs").fetchone() == (1,)
 
 
+def test_operations_ledger_sends_only_table_columns_to_supabase(
+    tmp_path, monkeypatch
+) -> None:
+    ledger = OperationsLedger(
+        tmp_path / "data",
+        env={
+            "SUPABASE_URL": "https://example.supabase.co",
+            "SUPABASE_SERVICE_ROLE_KEY": "sb_secret_example",
+        },
+    )
+    calls = []
+    monkeypatch.setattr(
+        ledger,
+        "_supabase_upsert",
+        lambda table, payload, conflict_target: calls.append(
+            (table, payload, conflict_target)
+        ),
+    )
+
+    manifest = build_run_manifest(
+        run_date="2026-07-21",
+        language="zh",
+        fetched_count=1,
+        unique_count=1,
+        analyzed_count=1,
+        score_threshold=6.0,
+        selected_items=[_item()],
+    )
+    ledger.record_run(manifest)
+
+    table, run_payload, conflict_target = calls[0]
+    assert table == "pipeline_runs"
+    assert conflict_target == "run_date,language"
+    assert "schema_version" not in run_payload
+    assert run_payload["run_date"] == "2026-07-21"
+    assert run_payload["cards"] == manifest["cards"]
+    assert calls[1][0] == "action_cards"
+
+
 def test_supabase_headers_support_new_and_legacy_server_keys(tmp_path) -> None:
     new_key_ledger = OperationsLedger(
         tmp_path / "new",

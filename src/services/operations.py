@@ -188,7 +188,22 @@ class OperationsLedger:
         if not self.supabase_enabled:
             return
         try:
-            self._supabase_upsert("pipeline_runs", payload, "run_date,language")
+            run_row = {
+                "run_date": run_date,
+                "language": language,
+                "generated_at": str(payload.get("generated_at") or _utc_now()),
+                "status": str(payload.get("status") or "drafted"),
+                "fetched_count": int(payload.get("fetched_count") or 0),
+                "unique_count": int(payload.get("unique_count") or 0),
+                "analyzed_count": int(payload.get("analyzed_count") or 0),
+                "selected_count": int(payload.get("selected_count") or 0),
+                "score_threshold": payload.get("score_threshold"),
+                "source_counts": payload.get("source_counts") or {},
+                "signal_counts": payload.get("signal_counts") or {},
+                "group_counts": payload.get("group_counts") or {},
+                "cards": payload.get("cards") or [],
+            }
+            self._supabase_upsert("pipeline_runs", run_row, "run_date,language")
             card_rows = [
                 {
                     "run_date": run_date,
