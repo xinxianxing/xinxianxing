@@ -78,10 +78,12 @@ def build_run_manifest(
     analyzed_count: int,
     score_threshold: float,
     selected_items: Iterable[ContentItem],
+    fetched_items: Iterable[ContentItem] = (),
     group_counts: Mapping[str, int] | None = None,
 ) -> dict[str, Any]:
     """Build a versioned, renderer-independent manifest for one daily run."""
     cards = [card_snapshot(item) for item in selected_items]
+    fetched_source_counts = Counter(_item_source_id(item) for item in fetched_items)
     source_counts = Counter(card["source_id"] for card in cards)
     signal_counts = Counter(
         card["signal_type"] for card in cards if card.get("signal_type")
@@ -97,6 +99,7 @@ def build_run_manifest(
         "analyzed_count": analyzed_count,
         "selected_count": len(cards),
         "score_threshold": score_threshold,
+        "fetched_source_counts": dict(sorted(fetched_source_counts.items())),
         "source_counts": dict(sorted(source_counts.items())),
         "signal_counts": dict(sorted(signal_counts.items())),
         "group_counts": dict(sorted((group_counts or {}).items())),

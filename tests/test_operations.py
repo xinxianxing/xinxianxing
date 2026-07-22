@@ -45,10 +45,12 @@ def test_manifest_is_compact_and_does_not_include_source_body() -> None:
         analyzed_count=18,
         score_threshold=6.0,
         selected_items=[_item()],
+        fetched_items=[_item()],
         group_counts={"tutorials": 1},
     )
 
     assert manifest["selected_count"] == 1
+    assert manifest["fetched_source_counts"] == {"reddit_promptengineering": 1}
     assert manifest["source_counts"] == {"reddit_promptengineering": 1}
     assert manifest["signal_counts"] == {"TUTORIAL": 1}
     assert manifest["cards"][0]["how_to"] == ["准备样本", "对比输出"]

@@ -187,6 +187,7 @@ class XinxianxingOrchestrator:
                     analyzed_count=len(analyzed_items),
                     score_threshold=threshold,
                     selected_items=important_items,
+                    fetched_items=all_items,
                     group_counts=balanced_result.group_counts,
                 )
                 manifest_path = self.storage.save_run_manifest(today, manifest, language=lang)

@@ -175,17 +175,24 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: uv run xinxianxing-channel-push --date "$RUN_DATE" --language zh --channel-id review
 
-      - name: Commit review delivery ledger
+      - name: Generate daily operations report
+        if: always()
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: uv run xinxianxing-operations-report --date "$RUN_DATE" --language zh
+
+      - name: Commit review delivery ledger and operations report
         if: always()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/runs/
+          git add data/runs/ data/reports/
           if git diff --cached --quiet; then
-            echo "No review delivery ledger changes to commit."
+            echo "No review delivery ledger or operations report changes to commit."
             exit 0
           fi
-          git commit -m "chore: record review delivery ${RUN_DATE}"
+          git commit -m "chore: record review delivery and operations report ${RUN_DATE}"
           git push
 
   push-channels:
@@ -288,17 +295,24 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: uv run xinxianxing-channel-push --date "$RUN_DATE" --language zh --exclude-channel-id review
 
-      - name: Commit channel delivery ledger
+      - name: Refresh daily operations report
+        if: always()
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: uv run xinxianxing-operations-report --date "$RUN_DATE" --language zh
+
+      - name: Commit channel delivery ledger and operations report
         if: always()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/runs/
+          git add data/runs/ data/reports/
           if git diff --cached --quiet; then
-            echo "No channel delivery ledger changes to commit."
+            echo "No channel delivery ledger or operations report changes to commit."
             exit 0
           fi
-          git commit -m "chore: record channel delivery ${RUN_DATE}"
+          git commit -m "chore: record channel delivery and operations report ${RUN_DATE}"
           git push
 
   sync-operations:

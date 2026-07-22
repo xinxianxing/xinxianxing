@@ -8,9 +8,13 @@ on:
       - 'src/**'
       - 'tests/**'
       - 'scripts/**'
+      - 'config/channels/**'
+      - 'data/config.github.json'
+      - 'docs/assets/**'
+      - 'supabase/**'
       - 'pyproject.toml'
       - 'uv.lock'
-      - '.github/workflows/ci.yml'
+      - '.github/workflows/**'
 
 jobs:
   test:

@@ -918,6 +918,31 @@ The manifest contains the selected Action Cards, source and signal counts, and
 filtering statistics. Delivery records contain only channel id, destination,
 status, item count, timestamp and error text; they never save webhook URLs.
 
+### Daily Operations Report
+
+After each review-channel push and each formal channel push, GitHub Actions
+also writes `data/reports/xinxianxing-YYYY-MM-DD-zh-operations.json`. This is
+an internal, Git-tracked health report; it is not published to the website and
+does not call the AI model again.
+
+The report records the funnel counts (fetched, deduplicated, analyzed and
+selected), source and signal distributions, per-channel delivery outcomes, and
+the last seven days of `有用` / `收藏` / `忽略` feedback when Supabase is
+available. It adds non-fatal warnings for conditions such as no selected cards,
+80% or more of selected cards coming from one source, missing source-breakdown
+data in older manifests, or a failed channel delivery.
+
+Generate or refresh one report locally with:
+
+```bash
+uv run xinxianxing-operations-report --date 2026-07-22 --language zh
+```
+
+Use `--feedback-days 14` to change the feedback lookback window, or
+`--output-dir /tmp/xinxianxing-reports` when checking a report without writing
+to `data/reports/`. The command remains useful without Supabase: it writes the
+local run and delivery health data and marks website feedback as unavailable.
+
 To mirror this state to Supabase, create a free Supabase project, open SQL
 Editor, and run [`supabase/schema.sql`](../supabase/schema.sql). Then add
 `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` to local `.env` and GitHub
