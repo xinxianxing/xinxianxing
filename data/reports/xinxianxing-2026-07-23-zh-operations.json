@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "run_date": "2026-07-23",
+  "language": "zh",
+  "generated_at": "2026-07-22T22:55:59.303673+00:00",
+  "run": {
+    "status": "drafted",
+    "fetched_count": 24,
+    "unique_count": 24,
+    "analyzed_count": 24,
+    "selected_count": 4,
+    "score_threshold": 6.0
+  },
+  "source_health": {
+    "fetched_source_counts": {
+      "hackernews": 2,
+      "indie_hackers": 2,
+      "latent_space": 1,
+      "reddit_promptengineering": 19
+    },
+    "selected_source_counts": {
+      "indie_hackers": 1,
+      "reddit_promptengineering": 3
+    },
+    "top_selected_source_id": "reddit_promptengineering",
+    "top_selected_source_share": 0.75
+  },
+  "signal_distribution": {
+    "PRODUCTIVITY_TIP": 1,
+    "TUTORIAL": 3
+  },
+  "group_distribution": {
+    "community": 3,
+    "money_cases": 1
+  },
+  "deliveries": {
+    "status_counts": {
+      "success": 1
+    },
+    "items": [
+      {
+        "channel_id": "review",
+        "channel_name": "信先行·内容审核群",
+        "destination_type": "free",
+        "item_count": 4,
+        "status": "success",
+        "delivered_at": "2026-07-22T22:55:58.003192+00:00",
+        "error": null
+      }
+    ]
+  },
+  "feedback": {
+    "available": true,
+    "period_days": 7,
+    "totals": {
+      "useful": 1,
+      "favorite": 0,
+      "ignore": 0
+    },
+    "top_cards": [
+      {
+        "card_id": "reddit:subreddit-rss:t3_1v2dy31",
+        "title": null,
+        "useful": 1,
+        "favorite": 0,
+        "ignore": 0
+      }
+    ],
+    "note": null
+  },
+  "warnings": []
+}

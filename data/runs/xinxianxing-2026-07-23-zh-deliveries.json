@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "run_date": "2026-07-23",
+  "language": "zh",
+  "deliveries": {
+    "review:free": {
+      "run_date": "2026-07-23",
+      "language": "zh",
+      "channel_id": "review",
+      "destination_type": "free",
+      "channel_name": "信先行·内容审核群",
+      "item_count": 4,
+      "status": "success",
+      "error": null,
+      "delivered_at": "2026-07-22T22:55:58.003192+00:00"
+    }
+  }
+}
