@@ -444,6 +444,7 @@ Content is scored 0-10:
     "ai_score_threshold": 7.0,
     "time_window_hours": 24,
     "max_items": 20,
+    "max_items_per_source": 3,
     "category_groups": {
       "ai": {
         "name": "AI / Machine Learning",
@@ -457,7 +458,11 @@ Content is scored 0-10:
       }
     },
     "default_group": "other",
-    "default_group_limit": 3
+    "default_group_limit": 3,
+    "missing_signal_alert": {
+      "consecutive_days": 3,
+      "signal_types": ["TUTORIAL", "MONEY_CASE", "PRODUCTIVITY_TIP"]
+    }
   }
 }
 ```
@@ -465,6 +470,10 @@ Content is scored 0-10:
 - `ai_score_threshold`: Only include content scoring >= this value
 - `time_window_hours`: Fetch content from last N hours
 - `max_items`: Optional final cap after all group limits are applied
+- `max_items_per_source`: Optional final cap for one source id. When set, a
+  fourth item from the same source is skipped even if the digest has room. This
+  protects source diversity and intentionally does not backfill with lower
+  quality items.
 - `category_groups`: Optional map of quota groups. Each group requires a positive
   `limit` and a non-empty `categories` list. Items within each group are kept by
   AI score, highest first.
@@ -473,6 +482,11 @@ Content is scored 0-10:
   configured group. Default is `other`.
 - `default_group_limit`: Optional positive limit for unmatched items. If omitted,
   unmatched items are unlimited except for `max_items`.
+- `missing_signal_alert`: Optional admin-only health rule. After
+  `consecutive_days` complete daily manifests show zero selected cards for one
+  configured `signal_type`, 信先行 sends one notice to
+  `XINXIANXING_ADMIN_WEBHOOK`. It never sends “no content today” messages to
+  subscriber channels, and it records the notice locally to avoid repeats.
 
 Balanced digest filtering runs after AI score threshold filtering and topic
 deduplication, but before enrichment. This reduces enrichment calls to only the
@@ -485,7 +499,7 @@ the default group.
 
 If the same category appears in multiple groups, 信先行 logs a warning and uses
 the first group in configuration order. Omitting both `category_groups` and
-`max_items` preserves the previous filtering behavior.
+`max_items` and `max_items_per_source` preserves the previous filtering behavior.
 
 ## Environment Variable Substitution
 
@@ -943,6 +957,16 @@ Use `--feedback-days 14` to change the feedback lookback window, or
 to `data/reports/`. The command remains useful without Supabase: it writes the
 local run and delivery health data and marks website feedback as unavailable.
 
+The 06:00 draft job also runs the configured `missing_signal_alert` rule. Run
+the same admin-only check locally with:
+
+```bash
+uv run xinxianxing-content-health-check --date 2026-07-22 --language zh
+```
+
+It reads existing manifests under `data/runs/`; it does not fetch content, call
+AI, or send a message to any subscriber channel.
+
 To mirror this state to Supabase, create a free Supabase project, open SQL
 Editor, and run [`supabase/schema.sql`](../supabase/schema.sql). Then add
 `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` to local `.env` and GitHub
@@ -988,6 +1012,9 @@ The command copies `docs/_drafts/2026-07-22-summary-zh.md` into
 `docs/_posts/` and keeps the original draft intact. It does not commit, deploy,
 or enable `auto_publish`; commit and push the resulting post when you are ready
 for the normal `Deploy Site` workflow to update Cloudflare Pages.
+
+For the fixed daily review and weekly publication rhythm, see
+[`docs/editorial-rhythm.md`](editorial-rhythm.md).
 
 Use `--dry-run` to check the paths first. If a post for the same date already
 exists, the command stops unless you explicitly pass `--force`.
