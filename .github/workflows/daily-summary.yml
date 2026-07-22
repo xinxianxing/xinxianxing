@@ -17,6 +17,7 @@ on:
           - both
           - generate
           - push
+          - sync
       run_date:
         description: "Optional draft date YYYY-MM-DD. Defaults to Asia/Shanghai today."
         required: false
@@ -297,12 +298,54 @@ jobs:
           git commit -m "chore: record channel delivery ${RUN_DATE}"
           git push
 
+  sync-operations:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.stage == 'sync' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+      TZ: Asia/Shanghai
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Set run date
+        run: |
+          if [ -n "${{ inputs.run_date }}" ]; then
+            echo "RUN_DATE=${{ inputs.run_date }}" >> "$GITHUB_ENV"
+          else
+            echo "RUN_DATE=$(date +'%Y-%m-%d')" >> "$GITHUB_ENV"
+          fi
+
+      - name: Sync operations ledger to Supabase
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: uv run xinxianxing-operations-sync --date "$RUN_DATE" --language zh
+
   notify-failure:
-    needs: [generate-draft, push-channels]
+    needs: [generate-draft, push-channels, sync-operations]
     if: >-
       ${{
         always() &&
-        (needs.generate-draft.result == 'failure' || needs.push-channels.result == 'failure')
+        (
+          needs.generate-draft.result == 'failure' ||
+          needs.push-channels.result == 'failure' ||
+          needs.sync-operations.result == 'failure'
+        )
       }}
     runs-on: ubuntu-latest
     permissions:
@@ -311,6 +354,7 @@ jobs:
       XINXIANXING_ADMIN_WEBHOOK: ${{ secrets.XINXIANXING_ADMIN_WEBHOOK }}
       GENERATE_RESULT: ${{ needs.generate-draft.result }}
       PUSH_RESULT: ${{ needs.push-channels.result }}
+      SYNC_RESULT: ${{ needs.sync-operations.result }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6

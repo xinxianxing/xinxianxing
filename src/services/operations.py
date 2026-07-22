@@ -258,6 +258,25 @@ class OperationsLedger:
             "error": error,
             "delivered_at": delivered_at,
         }
+        self.sync_delivery_row(row)
+
+    def sync_delivery_row(self, row: Mapping[str, Any]) -> None:
+        """Upsert one existing delivery row locally and to Supabase.
+
+        This is used by operations sync jobs that mirror already-recorded
+        delivery state without resending a webhook or changing the timestamp.
+        """
+        normalized = {
+            "run_date": str(row["run_date"]),
+            "language": str(row["language"]),
+            "channel_id": str(row["channel_id"]),
+            "destination_type": str(row["destination_type"]),
+            "channel_name": str(row["channel_name"]),
+            "item_count": int(row["item_count"]),
+            "status": str(row["status"]),
+            "error": row.get("error"),
+            "delivered_at": str(row["delivered_at"]),
+        }
         with self._sqlite_connection() as conn:
             conn.execute(
                 """
@@ -274,25 +293,25 @@ class OperationsLedger:
                     delivered_at=excluded.delivered_at
                 """,
                 (
-                    key.run_date,
-                    key.language,
-                    key.channel_id,
-                    key.destination_type,
-                    channel_name,
-                    item_count,
-                    status,
-                    error,
-                    delivered_at,
+                    normalized["run_date"],
+                    normalized["language"],
+                    normalized["channel_id"],
+                    normalized["destination_type"],
+                    normalized["channel_name"],
+                    normalized["item_count"],
+                    normalized["status"],
+                    normalized["error"],
+                    normalized["delivered_at"],
                 ),
             )
-        self._write_delivery_state_file(row)
+        self._write_delivery_state_file(normalized)
 
         if not self.supabase_enabled:
             return
         try:
             self._supabase_upsert(
                 "channel_deliveries",
-                row,
+                normalized,
                 "run_date,language,channel_id,destination_type",
             )
         except (httpx.HTTPError, ValueError) as exc:

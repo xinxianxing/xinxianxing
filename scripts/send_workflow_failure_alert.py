@@ -20,6 +20,7 @@ def main() -> None:
     run_url = f"{server_url}/{repository}/actions/runs/{run_id}" if run_id else server_url
     generate_result = os.getenv("GENERATE_RESULT", "unknown")
     push_result = os.getenv("PUSH_RESULT", "unknown")
+    sync_result = os.getenv("SYNC_RESULT", "unknown")
 
     payload = {
         "msg_type": "interactive",
@@ -38,6 +39,7 @@ def main() -> None:
                             [
                                 f"**草稿生成**：{generate_result}",
                                 f"**频道推送**：{push_result}",
+                                f"**台账同步**：{sync_result}",
                                 f"[打开 GitHub Actions 日志]({run_url})",
                             ]
                         ),

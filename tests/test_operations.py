@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 from contextlib import closing
+import json
 import sqlite3
 
 import httpx
@@ -85,6 +86,56 @@ def test_operations_ledger_keeps_local_delivery_state(tmp_path) -> None:
 
     ledger.sqlite_path.unlink()
     assert OperationsLedger(tmp_path / "data", env={}).already_delivered(key) is True
+
+
+def test_sync_delivery_row_preserves_existing_timestamp(tmp_path, monkeypatch) -> None:
+    ledger = OperationsLedger(
+        tmp_path / "data",
+        env={
+            "SUPABASE_URL": "https://example.supabase.co",
+            "SUPABASE_SERVICE_ROLE_KEY": "sb_secret_example",
+        },
+    )
+    calls = []
+    monkeypatch.setattr(
+        ledger,
+        "_supabase_upsert",
+        lambda table, payload, conflict_target: calls.append(
+            (table, payload, conflict_target)
+        ),
+    )
+
+    row = {
+        "run_date": "2026-07-21",
+        "language": "zh",
+        "channel_id": "review",
+        "destination_type": "free",
+        "channel_name": "信先行·内容审核群",
+        "item_count": 3,
+        "status": "success",
+        "error": None,
+        "delivered_at": "2026-07-21T22:48:03.017210+00:00",
+    }
+    ledger.sync_delivery_row(row)
+
+    with closing(sqlite3.connect(ledger.sqlite_path)) as conn:
+        stored = conn.execute(
+            "SELECT delivered_at FROM channel_deliveries"
+        ).fetchone()
+    delivery_file = (
+        tmp_path / "data" / "runs" / "xinxianxing-2026-07-21-zh-deliveries.json"
+    )
+    payload = json.loads(delivery_file.read_text(encoding="utf-8"))
+
+    assert stored == ("2026-07-21T22:48:03.017210+00:00",)
+    assert payload["deliveries"]["review:free"]["delivered_at"] == row["delivered_at"]
+    assert calls == [
+        (
+            "channel_deliveries",
+            row,
+            "run_date,language,channel_id,destination_type",
+        )
+    ]
 
 
 def test_operations_ledger_falls_back_when_supabase_is_unavailable(
