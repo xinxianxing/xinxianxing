@@ -1,0 +1,137 @@
+{
+  "schema_version": 1,
+  "run_date": "2026-07-23",
+  "language": "zh",
+  "generated_at": "2026-07-22T22:55:32.348926+00:00",
+  "status": "drafted",
+  "fetched_count": 24,
+  "unique_count": 24,
+  "analyzed_count": 24,
+  "selected_count": 4,
+  "score_threshold": 6.0,
+  "fetched_source_counts": {
+    "hackernews": 2,
+    "indie_hackers": 2,
+    "latent_space": 1,
+    "reddit_promptengineering": 19
+  },
+  "source_counts": {
+    "indie_hackers": 1,
+    "reddit_promptengineering": 3
+  },
+  "signal_counts": {
+    "PRODUCTIVITY_TIP": 1,
+    "TUTORIAL": 3
+  },
+  "group_counts": {
+    "community": 3,
+    "money_cases": 1
+  },
+  "cards": [
+    {
+      "card_id": "reddit:subreddit-rss:t3_1v3s2f7",
+      "source_type": "reddit",
+      "source_id": "reddit_promptengineering",
+      "title": "基于LangChain评估的确定性提示词优化循环",
+      "source_url": "https://www.reddit.com/r/PromptEngineering/comments/1v3s2f7/stop_guessing_how_to_build_a_deterministic_prompt/",
+      "signal_type": "TUTORIAL",
+      "score": 8.0,
+      "intro": "介绍一种基于LangChain评估的确定性提示词优化方法，通过冻结测试集、定义评分规则和自动迭代重写来提升提示词性能。",
+      "how_to": [
+        "冻结测试集：准备25个固定场景（如退款政策）。",
+        "定义评分规则：设置权重，例如基于事实性（50%）、语气（30%）、格式（20%）。",
+        "使用Claude Code作为技能：读取评分，重写一个元素，重新评分，仅当分数提高时保留重写。",
+        "重复迭代直到达到目标分数。"
+      ],
+      "suitable_for": [
+        "提示词工程师",
+        "AI应用开发者",
+        "需要优化提示词效果的团队"
+      ],
+      "evidence": "在一次测试中，将基线80%的提示词在10分钟内提升至98%。",
+      "credibility_risk": "该方法依赖于LangChain评估工具和Claude Code，可能需要一定的技术背景；测试场景有限（25个），实际效果可能因场景而异。",
+      "content_tags": [],
+      "published_at": "2026-07-22T20:26:02+00:00"
+    },
+    {
+      "card_id": "reddit:subreddit-rss:t3_1v3o6c9",
+      "source_type": "reddit",
+      "source_id": "reddit_promptengineering",
+      "title": "用提示词检查PPT标题是否经得起扫读测试",
+      "source_url": "https://www.reddit.com/r/PromptEngineering/comments/1v3o6c9/before_you_open_any_ai_presentation_tool_run_this/",
+      "signal_type": "TUTORIAL",
+      "score": 8.0,
+      "intro": "一个提示词技巧，在制作AI演示文稿前先用标题列表测试，确保仅靠标题就能传达完整故事。",
+      "how_to": [
+        "1. 将幻灯片标题按顺序粘贴到提示词中（只贴标题，不要正文）。",
+        "2. 让AI执行扫读测试：仅按顺序阅读这些标题，写出它们单独讲述的段落故事。",
+        "3. 如果故事有缺口或不连贯，AI会指出具体位置。",
+        "4. 列出所有只是主题标签（如“市场概览”）而非结论（如“我们正处于即将翻三倍的市场早期”）的标题，并重写为结论。",
+        "5. 检查是否有单个标题承担了双重任务，应拆分为两个标题。"
+      ],
+      "suitable_for": [
+        "PPT制作者",
+        "演示文稿设计者",
+        "需要快速传达信息的职场人士",
+        "使用AI辅助制作幻灯片的人"
+      ],
+      "evidence": "未提供具体数据",
+      "credibility_risk": "提示词效果取决于AI模型的理解能力，可能需要多次迭代；标题列表需完整且有序。",
+      "content_tags": [],
+      "published_at": "2026-07-22T18:11:44+00:00"
+    },
+    {
+      "card_id": "reddit:subreddit-rss:t3_1v3p1a1",
+      "source_type": "reddit",
+      "source_id": "reddit_promptengineering",
+      "title": "将混乱转录稿转化为结构化演示文稿大纲的提示词",
+      "source_url": "https://www.reddit.com/r/PromptEngineering/comments/1v3p1a1/copypaste_this_prompt_to_turn_a_messy_call/",
+      "signal_type": "TUTORIAL",
+      "score": 7.0,
+      "intro": "一个提示词，用于将会议或网络研讨会转录稿重新组织成结构化的总结演示文稿大纲，而非按对话顺序罗列。",
+      "how_to": [
+        "将转录稿粘贴到AI工具中。",
+        "使用提供的提示词，要求AI重建内容：识别决策、未解决的问题和行动项，忽略闲聊和重复。",
+        "将剩余内容按4-6个主题分组，这些主题对错过会议的人有意义。",
+        "按先结果后推理的顺序排列主题。",
+        "对每个主题输出：幻灯片标题（完整句子形式的要点）和2-3个支持该要点的要点。",
+        "如果转录稿中决策或负责人不明确，则注明。"
+      ],
+      "suitable_for": [
+        "需要快速整理会议纪要的职场人士",
+        "需要将转录稿转化为演示文稿的团队",
+        "希望提升AI输出质量的提示词工程师"
+      ],
+      "evidence": "未提供具体数据",
+      "credibility_risk": "提示词效果取决于转录稿质量和AI模型能力；可能需要调整以适应不同场景。",
+      "content_tags": [],
+      "published_at": "2026-07-22T18:41:39+00:00"
+    },
+    {
+      "card_id": "rss:feed.indiehackers.world_posts.rss?exclude=link-post:33902c51305d51d8",
+      "source_type": "rss",
+      "source_id": "indie_hackers",
+      "title": "AI根据合作机会类型自动生成外联邮件",
+      "source_url": "https://feed.indiehackers.world/post/d471304c36",
+      "signal_type": "PRODUCTIVITY_TIP",
+      "score": 6.0,
+      "intro": "本文介绍如何根据合作机会的来源类型（如热介绍、主动请求、需要信息、拒绝），使用AI自动生成不同风格的邮件草稿，节省手动撰写时间。",
+      "how_to": [
+        "1. 将合作机会分类为：热介绍、主动请求、需要信息、拒绝。",
+        "2. 对于热介绍：起草一封简洁的跟进邮件，提及介绍人，说明可能的合作，并建议一个简单的下一步。",
+        "3. 对于主动请求：感谢对方，回复提案，并在需要通话时附上日历预约链接。",
+        "4. 对于需要信息：如果是主动请求，仅询问缺失的具体信息；如果是自己发现或经介绍，起草一封简短邮件开始对话，只询问评估所需的信息，不要对对方受众或结果做无根据的声称。",
+        "5. 对于拒绝：如果是主动请求，起草礼貌回复说明目前不合适。"
+      ],
+      "suitable_for": [
+        "创业者",
+        "商务拓展人员",
+        "需要处理大量合作机会的团队"
+      ],
+      "evidence": "未提供具体数据",
+      "credibility_risk": "该方法依赖对机会来源的准确分类，且邮件模板需要根据具体业务调整；AI生成内容需人工审核以避免不准确或不当表述。",
+      "content_tags": [],
+      "published_at": "2026-07-22T13:21:38+00:00"
+    }
+  ]
+}
