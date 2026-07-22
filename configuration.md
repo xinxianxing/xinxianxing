@@ -925,6 +925,14 @@ Actions Secrets. The service role key is used by trusted automation only. If
 Supabase is unavailable or not configured, the daily pipeline continues with
 the local manifest and SQLite ledger.
 
+To store public website feedback (`有用` / `收藏` / `忽略`), also add
+`SUPABASE_ANON_KEY` to GitHub Actions Secrets. Use the Supabase project's
+**Publishable key** (or legacy **anon public** key), never the service role
+key. The static-site build embeds this public key only to insert into
+`card_feedback`; the RLS policy in `supabase/schema.sql` permits no browser
+read, update, or delete access. If this optional secret is absent, feedback
+buttons continue to work only with the local `xinxianxing-feedback` service.
+
 GitHub Actions also sends `XINXIANXING_ADMIN_WEBHOOK` a concise card whenever
 the generate-draft or push-channels job fails, including a direct Actions-log
 link. This covers setup and dependency failures that occur before the normal
