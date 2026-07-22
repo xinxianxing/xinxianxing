@@ -18,8 +18,15 @@ from src.models import (
 from src.orchestrator import XinxianxingOrchestrator
 
 
-def make_item(item_id: str, score: float, category: str | None) -> ContentItem:
+def make_item(
+    item_id: str,
+    score: float,
+    category: str | None,
+    source_id: str | None = None,
+) -> ContentItem:
     metadata = {"category": category} if category is not None else {}
+    if source_id is not None:
+        metadata["source_id"] = source_id
     return ContentItem(
         id=item_id,
         source_type=SourceType.RSS,
@@ -104,6 +111,42 @@ def test_max_items_works_without_category_groups() -> None:
     assert [item.id for item in result.items] == ["higher"]
 
 
+def test_max_items_per_source_keeps_digest_diverse_without_filling_quota() -> None:
+    filtering = FilteringConfig(max_items=8, max_items_per_source=2)
+    items = [
+        make_item("reddit-top", 10.0, None, "reddit_promptengineering"),
+        make_item("reddit-second", 9.0, None, "reddit_promptengineering"),
+        make_item("reddit-third", 8.0, None, "reddit_promptengineering"),
+        make_item("reddit-fourth", 7.0, None, "reddit_promptengineering"),
+        make_item("rss-top", 6.5, None, "latent_space"),
+    ]
+
+    result = make_orchestrator(filtering).apply_balanced_digest(items)
+
+    assert [item.id for item in result.items] == [
+        "reddit-top",
+        "reddit-second",
+        "rss-top",
+    ]
+
+
+def test_max_items_per_source_allows_fewer_items_when_no_other_source_qualifies() -> None:
+    filtering = FilteringConfig(max_items=8, max_items_per_source=3)
+    items = [
+        make_item(
+            f"reddit-{index}",
+            10.0 - index,
+            None,
+            "reddit_promptengineering",
+        )
+        for index in range(5)
+    ]
+
+    result = make_orchestrator(filtering).apply_balanced_digest(items)
+
+    assert [item.id for item in result.items] == ["reddit-0", "reddit-1", "reddit-2"]
+
+
 def test_duplicate_category_warns_and_first_group_wins() -> None:
     filtering = FilteringConfig(
         category_groups={
@@ -126,6 +169,7 @@ def test_duplicate_category_warns_and_first_group_wins() -> None:
     "kwargs",
     [
         {"max_items": 0},
+        {"max_items_per_source": 0},
         {"default_group_limit": 0},
         {"category_groups": {"ai": {"limit": 0, "categories": ["ai"]}}},
         {"category_groups": {"ai": {"limit": 1, "categories": []}}},

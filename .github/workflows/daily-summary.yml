@@ -182,17 +182,23 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: uv run xinxianxing-operations-report --date "$RUN_DATE" --language zh
 
-      - name: Commit review delivery ledger and operations report
+      - name: Alert admin for missing content columns
+        if: always()
+        env:
+          XINXIANXING_ADMIN_WEBHOOK: ${{ secrets.XINXIANXING_ADMIN_WEBHOOK }}
+        run: uv run xinxianxing-content-health-check --date "$RUN_DATE" --language zh
+
+      - name: Commit review delivery ledger, operations report, and health state
         if: always()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data/runs/ data/reports/
           if git diff --cached --quiet; then
-            echo "No review delivery ledger or operations report changes to commit."
+            echo "No review delivery ledger, operations report, or health state changes to commit."
             exit 0
           fi
-          git commit -m "chore: record review delivery and operations report ${RUN_DATE}"
+          git commit -m "chore: record review delivery and health state ${RUN_DATE}"
           git push
 
   push-channels:

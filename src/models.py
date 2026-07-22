@@ -470,15 +470,30 @@ class CategoryGroupConfig(BaseModel):
     categories: List[str] = Field(min_length=1)
 
 
+class MissingSignalAlertConfig(BaseModel):
+    """Alert settings for product columns with no recent selected cards."""
+
+    consecutive_days: int = Field(default=3, ge=2)
+    signal_types: List[SignalType] = Field(
+        default_factory=lambda: [
+            SignalType.TUTORIAL,
+            SignalType.MONEY_CASE,
+            SignalType.PRODUCTIVITY_TIP,
+        ]
+    )
+
+
 class FilteringConfig(BaseModel):
     """Content filtering configuration."""
 
     ai_score_threshold: float = 7.0
     time_window_hours: int = 24
     max_items: Optional[int] = Field(default=None, gt=0)
+    max_items_per_source: Optional[int] = Field(default=None, gt=0)
     category_groups: Dict[str, CategoryGroupConfig] = Field(default_factory=dict)
     default_group: str = "other"
     default_group_limit: Optional[int] = Field(default=None, gt=0)
+    missing_signal_alert: Optional[MissingSignalAlertConfig] = None
 
 
 class PublishingConfig(BaseModel):

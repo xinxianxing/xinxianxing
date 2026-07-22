@@ -140,15 +140,10 @@ class XinxianxingOrchestrator:
             # 5.6 Optional second-stage Twitter reply expansion + targeted re-analysis
             await self._expand_twitter_discussion(important_items)
 
-            paid_webhook_items = [
-                item for item in important_items
-                if item.ai_score and item.ai_score >= threshold
-            ]
-            paid_webhook_items.sort(key=lambda x: x.ai_score or 0, reverse=True)
-
             # 5.7 Apply per-category and global digest limits before enrichment
             balanced_result = self.apply_balanced_digest(important_items)
             important_items = balanced_result.items
+            paid_webhook_items = list(important_items)
 
             # Show per-sub-source selection breakdown
             selected_counts: Dict[str, int] = defaultdict(int)
@@ -573,8 +568,9 @@ class XinxianxingOrchestrator:
         filtering = self.config.filtering
         groups = filtering.category_groups
         max_items = filtering.max_items
+        max_items_per_source = filtering.max_items_per_source
 
-        if not groups and max_items is None:
+        if not groups and max_items is None and max_items_per_source is None:
             return BalancedDigestResult(items=items)
 
         sorted_items = sorted(
@@ -603,6 +599,7 @@ class XinxianxingOrchestrator:
 
         selected: List[tuple[ContentItem, str]] = []
         group_counts: Dict[str, int] = defaultdict(int)
+        source_counts: Dict[str, int] = defaultdict(int)
         default_group = filtering.default_group
 
         for item in sorted_items:
@@ -621,8 +618,16 @@ class XinxianxingOrchestrator:
             if limit is not None and group_counts[group_key] >= limit:
                 continue
 
+            source_id = str(item.metadata.get("source_id") or item.source_type.value)
+            if (
+                max_items_per_source is not None
+                and source_counts[source_id] >= max_items_per_source
+            ):
+                continue
+
             selected.append((item, group_key))
             group_counts[group_key] += 1
+            source_counts[source_id] += 1
 
         if max_items is not None:
             selected = selected[:max_items]
@@ -640,6 +645,10 @@ class XinxianxingOrchestrator:
             self.console.print(
                 f"⚖️ Balanced digest selected {len(selected)}/{len(items)} items"
             )
+            if max_items_per_source is not None:
+                self.console.print(
+                    f"      • per source: up to {max_items_per_source} items"
+                )
             for group_key, group in groups.items():
                 label = group.name or group_key
                 self.console.print(

@@ -260,6 +260,7 @@
     "ai_score_threshold": 6.0,
     "time_window_hours": 24,
     "max_items": 12,
+    "max_items_per_source": 3,
     "category_groups": {
       "tutorials": {
         "name": "教程技巧",
@@ -284,7 +285,15 @@
       }
     },
     "default_group": "community",
-    "default_group_limit": 7
+    "default_group_limit": 7,
+    "missing_signal_alert": {
+      "consecutive_days": 3,
+      "signal_types": [
+        "TUTORIAL",
+        "MONEY_CASE",
+        "PRODUCTIVITY_TIP"
+      ]
+    }
   },
   "webhook": {
     "enabled": true,
