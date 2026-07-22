@@ -3,76 +3,56 @@ layout: default
 title: Scoring System
 ---
 
-# Scoring System
+# 信先行评分说明
 
-After fetching content from all sources, 信先行 uses an AI model to score each item on a 0-10 scale. This determines what appears in the daily summary.
+信先行把抓取到的原始内容转换为 Action Card，并按 `0-10` 评估它是否值得普通人花时间学习或尝试。评分用于筛选每日草稿和不同频道的最低推送门槛，不代表投资、收入或产品效果承诺。
 
-## Pipeline
+## 评估原则
 
-1. **Batch processing** — Items are scored in batches of 10 with a progress bar. Failed items receive a score of 0.
-2. **Content preparation** — For each item, the content is truncated (800 chars if comments are present, 1000 otherwise) and engagement metrics are assembled from metadata (HN score, Reddit upvote ratio, etc.).
-3. **AI analysis** — The prepared content is sent to the configured AI model (temperature 0.3) with a system prompt defining the scoring criteria.
-4. **Response parsing** — The AI response is parsed as JSON (with fallbacks for code-block-wrapped JSON). Each item gets: `ai_score` (float), `ai_reason` (string), `ai_summary` (string), and `ai_tags` (list).
-5. **Retry** — Failed AI calls are retried up to 3 times with exponential backoff (2-10 seconds).
+- 只基于原文及其可验证的上下文，不补造步骤、收益或数据。
+- 教程优先看步骤是否清楚、能否复现；变现案例优先看证据和风险说明；效率技巧优先看是否能节省真实工作时间。
+- 内容不够具体时，应降低评分并在卡片中说明不确定性。
+- 分数是排序辅助，不替代人工审核。审核群和草稿发布流程仍由人决定。
 
-## Scoring Scale
+## 分数锚点
 
-| Score | Tier | Description |
-|-------|------|-------------|
-| 9-10 | Groundbreaking | Major breakthroughs, paradigm shifts, major version releases, significant research breakthroughs |
-| 7-8 | High Value | Important developments, technical deep-dives, novel approaches, insightful analysis, valuable tools |
-| 5-6 | Interesting | Incremental improvements, useful tutorials, moderate community interest |
-| 3-4 | Low Priority | Minor updates, common knowledge, overly promotional |
-| 0-2 | Noise | Spam, off-topic, trivial updates |
+| 分数 | 含义 | 常见情况 |
+|---|---|---|
+| 0-3 | 不建议投入时间 | 内容空泛、标题党、步骤缺失，或无法判断真实性。 |
+| 4-5 | 可以知道，但未必值得实践 | 方法常见、信息有限，或只有观点没有可执行细节。 |
+| 6-7 | 值得尝试 | 步骤清楚，有一定新意，普通读者看完可能会去验证。 |
+| 8-9 | 高实用价值 | 方法具体，有可核对的效果或案例，明显能节省时间或带来机会。 |
+| 10 | 极少出现 | 有充分证据且可能显著改变工作方式的内容。 |
 
-## Scoring Factors
+模型先在心里判断内容属于哪个区间，再给出具体分数，避免所有内容都集中在 6-7 分。
 
-The AI evaluates each item based on:
+## 生成流程
 
-- **Technical depth and novelty** — original ideas, new techniques, research contributions
-- **Potential impact** — how broadly this affects software engineering, AI/ML, or systems research
-- **Quality of writing/presentation** — clarity, structure, thoroughness
-- **Community discussion** — insightful comments, diverse viewpoints, substantive debates
-- **Engagement signals** — high upvotes/favorites paired with substantive discussion (not just raw numbers)
+1. 从 RSS、Reddit、Hacker News、Twitter/X 等已配置来源收集内容并去重。
+2. AI 为每条内容选择 `TUTORIAL`、`MONEY_CASE`、`PRODUCTIVITY_TIP` 等信号类型。
+3. AI 生成标题、一句话简介、具体做法、适用对象、效果或数据、风险提示、评分和来源链接。
+4. 低于 `filtering.ai_score_threshold` 的内容不进入每日草稿；频道还会按自身 `min_score` 再次过滤。
+5. 草稿进入审核群和预览页；正式文章只在人工确认后发布。
 
-Engagement metadata is source-specific: HN provides score and comment count, Reddit provides upvote ratio and comment count.
+## 影响评分的因素
 
-## Filtering
+- **可执行性**：是否给出了原文能支持的具体步骤、提示词或工作流。
+- **可验证性**：是否提供了来源、案例、数据或可以自行验证的条件。
+- **适用范围**：是否对 AI 创业者、产品经理、运营人员或希望提效的普通用户有明确价值。
+- **时效和新意**：是否比常识或过期经验更值得现在关注。
+- **风险透明度**：赚钱案例、个人经验和小样本实验是否诚实说明夸大、幸存者偏差或不可泛化之处。
 
-After scoring, items are filtered by `filtering.ai_score_threshold` (default: `7.0`) and sorted by score descending. Optional balanced digest quotas are then applied before enrichment.
+## 配置
+
+全局筛选门槛在 `data/config.json`：
 
 ```json
 {
   "filtering": {
-    "ai_score_threshold": 7.0,
-    "time_window_hours": 24,
-    "max_items": 20,
-    "category_groups": {
-      "ai": {
-        "limit": 5,
-        "categories": ["ai-news", "ai-tools", "machine-learning"]
-      }
-    }
+    "ai_score_threshold": 6.0,
+    "max_items": 12
   }
 }
 ```
 
-`category_groups` limits each configured category group independently.
-`max_items` caps the merged result. Both fields are optional; without them,
-scoring and filtering behave as before.
-
-Items scoring 9.0 or above are featured in the "Today's Highlights" section of the summary.
-
-## Enrichment
-
-Items that pass the score threshold and any balanced digest limits go through a second AI pass for enrichment (`src/ai/enricher.py`):
-
-1. **Concept extraction** — AI identifies 1-3 technical concepts in the item that may need explanation.
-2. **Web search** — Each concept is searched via DuckDuckGo to gather grounding context.
-3. **Structured analysis** — The item content and search results are sent to AI, which produces:
-   - `whats_new` — what specifically happened or changed
-   - `why_it_matters` — significance and impact
-   - `key_details` — notable technical details or caveats
-   - `background` — background knowledge for readers without deep domain expertise
-
-These fields are combined into a `detailed_summary` stored in the item's metadata and used in the final daily summary.
+每个飞书频道还可以在 `config/channels/*.json` 用 `min_score` 设置自己的门槛。提高门槛会减少推送数量，降低门槛会增加内容覆盖，但需要更仔细审核。

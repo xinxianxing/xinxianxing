@@ -943,6 +943,22 @@ from the `docs/` directory into `dist/`, then deployed with Wrangler. Published
 posts appear on the homepage and feeds; draft previews under `/drafts/` are
 rendered for review links but are not added to the homepage or RSS feeds.
 
+### Publish A Reviewed Draft
+
+After reviewing the preview, publish one daily issue explicitly with:
+
+```bash
+uv run xinxianxing-publish --date 2026-07-22 --language zh
+```
+
+The command copies `docs/_drafts/2026-07-22-summary-zh.md` into
+`docs/_posts/` and keeps the original draft intact. It does not commit, deploy,
+or enable `auto_publish`; commit and push the resulting post when you are ready
+for the normal `Deploy Site` workflow to update Cloudflare Pages.
+
+Use `--dry-run` to check the paths first. If a post for the same date already
+exists, the command stops unless you explicitly pass `--force`.
+
 ### Manual URL Add
 
 Use `xinxianxing-add` when you already have a useful public article or tweet URL and want to generate an Action Card without waiting for the scheduled scraper run:
