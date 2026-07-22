@@ -152,6 +152,9 @@ jobs:
 
       - name: Build Cloudflare site
         if: steps.cloudflare.outputs.enabled == 'true'
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: uv run python scripts/build_cloudflare_site.py
 
       - name: Deploy Cloudflare Pages

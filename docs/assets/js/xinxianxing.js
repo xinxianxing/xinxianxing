@@ -145,13 +145,37 @@
     function postFeedback(cardId, buttonType) {
       var payload = JSON.stringify({
         card_id: cardId,
-        button_type: buttonType
+        button_type: buttonType,
+        origin: 'website'
       });
       var options = {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: payload
       };
+
+      var config = window.XINXIANXING_FEEDBACK_CONFIG || {};
+      if (config.url && config.key) {
+        return fetch(config.url.replace(/\/$/, '') + '/rest/v1/card_feedback', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': config.key,
+            'Authorization': 'Bearer ' + config.key,
+            'Prefer': 'return=minimal'
+          },
+          body: payload
+        }).then(function (response) {
+          if (response.ok) return response;
+          throw new Error('Supabase feedback API unavailable');
+        });
+      }
+
+      var host = window.location.hostname;
+      var isLocal = host === '127.0.0.1' || host === 'localhost' || host === '::1';
+      if (!isLocal) {
+        return Promise.reject(new Error('feedback collection is not configured'));
+      }
 
       return fetch('/api/feedback', options).then(function (response) {
         if (response.ok) return response;

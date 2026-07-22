@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import html
 import json
+import os
 import re
 import shutil
 from dataclasses import dataclass
@@ -496,6 +497,7 @@ def layout(title: str, body_html: str, permalink: str) -> str:
     if is_tutorial:
         body_class += " tutorial-page"
     robots_meta = '  <meta name="robots" content="noindex,nofollow">\n' if is_draft else ""
+    feedback_config = json.dumps(public_feedback_config(), ensure_ascii=False).replace("</", "<\\/")
     article_header = ""
     if not is_home:
         if is_tutorial:
@@ -526,6 +528,7 @@ def layout(title: str, body_html: str, permalink: str) -> str:
   <link rel="alternate" type="application/atom+xml" title="信先行 · 中文精选" href="/feed-zh.xml">
   <link rel="alternate" type="application/atom+xml" title="Xinxianxing · English Picks" href="/feed-en.xml">
   <link rel="stylesheet" href="/assets/css/site.css">
+  <script>window.XINXIANXING_FEEDBACK_CONFIG = {feedback_config};</script>
   <script src="/assets/js/site.js" defer></script>
 </head>
 <body class="{body_class}">
@@ -548,6 +551,15 @@ def layout(title: str, body_html: str, permalink: str) -> str:
 </body>
 </html>
 """
+
+
+def public_feedback_config() -> dict[str, str]:
+    """Return the browser-safe Supabase insert configuration, when enabled."""
+    url = os.getenv("SUPABASE_URL", "").strip().rstrip("/")
+    publishable_key = os.getenv("SUPABASE_ANON_KEY", "").strip()
+    if not url or not publishable_key:
+        return {}
+    return {"url": url, "key": publishable_key}
 
 
 def absolute_url(path: str) -> str:
