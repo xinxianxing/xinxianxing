@@ -1,0 +1,104 @@
+{
+  "schema_version": 1,
+  "run_date": "2026-07-22",
+  "language": "zh",
+  "generated_at": "2026-07-22T03:17:42.603701+00:00",
+  "run": {
+    "status": "drafted",
+    "fetched_count": 25,
+    "unique_count": 25,
+    "analyzed_count": 25,
+    "selected_count": 7,
+    "score_threshold": 6.0
+  },
+  "source_health": {
+    "fetched_source_counts": {},
+    "selected_source_counts": {
+      "reddit_promptengineering": 7
+    },
+    "top_selected_source_id": "reddit_promptengineering",
+    "top_selected_source_share": 1.0
+  },
+  "signal_distribution": {
+    "PRODUCTIVITY_TIP": 1,
+    "TUTORIAL": 6
+  },
+  "group_distribution": {
+    "community": 7
+  },
+  "deliveries": {
+    "status_counts": {
+      "success": 5
+    },
+    "items": [
+      {
+        "channel_id": "ai_tools",
+        "channel_name": "信先行·AI工具日报",
+        "destination_type": "free",
+        "item_count": 7,
+        "status": "success",
+        "delivered_at": "2026-07-22T03:17:34.219302+00:00",
+        "error": null
+      },
+      {
+        "channel_id": "ai_tools",
+        "channel_name": "信先行·AI工具日报·会员",
+        "destination_type": "paid",
+        "item_count": 7,
+        "status": "success",
+        "delivered_at": "2026-07-22T03:17:36.568863+00:00",
+        "error": null
+      },
+      {
+        "channel_id": "ai_tutorials",
+        "channel_name": "信先行·AI教程技巧",
+        "destination_type": "free",
+        "item_count": 6,
+        "status": "success",
+        "delivered_at": "2026-07-22T03:17:38.513401+00:00",
+        "error": null
+      },
+      {
+        "channel_id": "productivity_tips",
+        "channel_name": "信先行·效率技巧",
+        "destination_type": "free",
+        "item_count": 1,
+        "status": "success",
+        "delivered_at": "2026-07-22T03:17:40.330125+00:00",
+        "error": null
+      },
+      {
+        "channel_id": "review",
+        "channel_name": "信先行·内容审核群",
+        "destination_type": "free",
+        "item_count": 7,
+        "status": "success",
+        "delivered_at": "2026-07-21T22:48:03.017210+00:00",
+        "error": null
+      }
+    ]
+  },
+  "feedback": {
+    "available": true,
+    "period_days": 7,
+    "totals": {
+      "useful": 1,
+      "favorite": 0,
+      "ignore": 0
+    },
+    "top_cards": [
+      {
+        "card_id": "reddit:subreddit-rss:t3_1v2dy31",
+        "title": "大纲质量胜过模型选择",
+        "useful": 1,
+        "favorite": 0,
+        "ignore": 0
+      }
+    ],
+    "note": null
+  },
+  "warnings": [
+    "入选内容过度集中于 reddit_promptengineering（100%）；请检查其他信源是否失效或当天内容是否不足。",
+    "本次运行缺少原始抓取的分信源统计；下次生成会自动补齐。"
+  ]
+}
