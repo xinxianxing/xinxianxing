@@ -13,6 +13,39 @@
       "status": "success",
       "error": null,
       "delivered_at": "2026-07-22T22:55:58.003192+00:00"
+    },
+    "ai_tools:free": {
+      "run_date": "2026-07-23",
+      "language": "zh",
+      "channel_id": "ai_tools",
+      "destination_type": "free",
+      "channel_name": "信先行·AI工具日报",
+      "item_count": 4,
+      "status": "success",
+      "error": null,
+      "delivered_at": "2026-07-23T03:24:18.379663+00:00"
+    },
+    "ai_tools:paid": {
+      "run_date": "2026-07-23",
+      "language": "zh",
+      "channel_id": "ai_tools",
+      "destination_type": "paid",
+      "channel_name": "信先行·AI工具日报·会员",
+      "item_count": 4,
+      "status": "success",
+      "error": null,
+      "delivered_at": "2026-07-23T03:24:19.849257+00:00"
+    },
+    "ai_tutorials:free": {
+      "run_date": "2026-07-23",
+      "language": "zh",
+      "channel_id": "ai_tutorials",
+      "destination_type": "free",
+      "channel_name": "信先行·AI教程技巧",
+      "item_count": 3,
+      "status": "success",
+      "error": null,
+      "delivered_at": "2026-07-23T03:24:21.249479+00:00"
     }
   }
 }
