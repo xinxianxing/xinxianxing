@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "run_date": "2026-07-24",
+  "language": "zh",
+  "generated_at": "2026-07-23T22:49:26.230245+00:00",
+  "run": {
+    "status": "drafted",
+    "fetched_count": 33,
+    "unique_count": 33,
+    "analyzed_count": 33,
+    "selected_count": 3,
+    "score_threshold": 6.0
+  },
+  "source_health": {
+    "fetched_source_counts": {
+      "hackernews": 1,
+      "indie_hackers": 1,
+      "latent_space": 2,
+      "product_hunt_ai": 7,
+      "reddit_promptengineering": 22
+    },
+    "selected_source_counts": {
+      "reddit_promptengineering": 3
+    },
+    "top_selected_source_id": "reddit_promptengineering",
+    "top_selected_source_share": 1.0
+  },
+  "signal_distribution": {
+    "TUTORIAL": 3
+  },
+  "group_distribution": {
+    "community": 3
+  },
+  "deliveries": {
+    "status_counts": {
+      "success": 1
+    },
+    "items": [
+      {
+        "channel_id": "review",
+        "channel_name": "信先行·内容审核群",
+        "destination_type": "free",
+        "item_count": 3,
+        "status": "success",
+        "delivered_at": "2026-07-23T22:49:24.893822+00:00",
+        "error": null
+      }
+    ]
+  },
+  "feedback": {
+    "available": true,
+    "period_days": 7,
+    "totals": {
+      "useful": 1,
+      "favorite": 0,
+      "ignore": 0
+    },
+    "top_cards": [
+      {
+        "card_id": "reddit:subreddit-rss:t3_1v2dy31",
+        "title": null,
+        "useful": 1,
+        "favorite": 0,
+        "ignore": 0
+      }
+    ],
+    "note": null
+  },
+  "warnings": [
+    "入选内容过度集中于 reddit_promptengineering（100%）；请检查其他信源是否失效或当天内容是否不足。"
+  ]
+}

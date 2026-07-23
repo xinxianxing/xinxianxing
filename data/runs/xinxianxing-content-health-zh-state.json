@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "alerts": [
+    {
+      "key": "MONEY_CASE:2026-07-22",
+      "signal_type": "MONEY_CASE",
+      "dates": [
+        "2026-07-22",
+        "2026-07-23",
+        "2026-07-24"
+      ],
+      "sent_at": "2026-07-23T22:49:28.401090+00:00"
+    }
+  ],
+  "last_checked_date": "2026-07-24",
+  "language": "zh"
+}
