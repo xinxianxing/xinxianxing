@@ -2,7 +2,7 @@
   "schema_version": 1,
   "run_date": "2026-07-24",
   "language": "zh",
-  "generated_at": "2026-07-23T22:49:26.230245+00:00",
+  "generated_at": "2026-07-24T03:18:23.225506+00:00",
   "run": {
     "status": "drafted",
     "fetched_count": 33,
@@ -33,9 +33,36 @@
   },
   "deliveries": {
     "status_counts": {
-      "success": 1
+      "success": 4
     },
     "items": [
+      {
+        "channel_id": "ai_tools",
+        "channel_name": "信先行·AI工具日报",
+        "destination_type": "free",
+        "item_count": 3,
+        "status": "success",
+        "delivered_at": "2026-07-24T03:18:19.291555+00:00",
+        "error": null
+      },
+      {
+        "channel_id": "ai_tools",
+        "channel_name": "信先行·AI工具日报·会员",
+        "destination_type": "paid",
+        "item_count": 3,
+        "status": "success",
+        "delivered_at": "2026-07-24T03:18:20.912093+00:00",
+        "error": null
+      },
+      {
+        "channel_id": "ai_tutorials",
+        "channel_name": "信先行·AI教程技巧",
+        "destination_type": "free",
+        "item_count": 3,
+        "status": "success",
+        "delivered_at": "2026-07-24T03:18:22.358703+00:00",
+        "error": null
+      },
       {
         "channel_id": "review",
         "channel_name": "信先行·内容审核群",
